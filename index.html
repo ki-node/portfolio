@@ -12,7 +12,8 @@
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/theme-violet.css">
     <link rel="stylesheet" href="assets/css/enhancements.css?v=2">
-    <script type="module" src="assets/js/main.js"></script>
+    <link rel="stylesheet" href="assets/css/wow.css?v=1">
+    <script type="module" src="assets/js/main.js?v=2"></script>
 </head>
 <body>
     <a class="skip-link" href="#main">Zum Inhalt springen</a>
@@ -31,6 +32,28 @@
 
     <p class="sr-only" aria-live="polite" data-mode-status></p>
 
+    <div class="code-hud" aria-hidden="true">
+        <div class="code-hud__topline">
+            <span>XRAY://PORTFOLIO</span>
+            <span>DOM ONLINE</span>
+            <span data-hud-scroll>SCROLL 000%</span>
+        </div>
+        <div class="code-hud__reticle" data-code-reticle>
+            <span></span><span></span>
+            <output data-hud-coordinates>X 050 / Y 050</output>
+        </div>
+        <div class="code-hud__rail">
+            <span>12 COL</span>
+            <span>8 PX</span>
+            <span>AA</span>
+        </div>
+        <div class="code-hud__terminal">
+            <span><i></i> runtime.ready()</span>
+            <span><i></i> a11y.guard: active</span>
+            <span><i></i> viewport: adaptive</span>
+        </div>
+    </div>
+
     <header class="site-header" data-header>
         <a class="wordmark" href="#top" aria-label="Zur Startseite">
             <span>PF</span>
@@ -38,15 +61,35 @@
         </a>
 
         <button class="menu-button" type="button" aria-expanded="false" aria-controls="navigation" data-menu-button>
-            <span class="sr-only">Menü öffnen</span>
-            <span></span>
-            <span></span>
+            <span class="sr-only" data-menu-label>Menü öffnen</span>
+            <span class="menu-button__text" aria-hidden="true">Menü</span>
+            <span class="menu-button__glyph" aria-hidden="true"><i></i><i></i></span>
         </button>
 
         <nav class="navigation" id="navigation" aria-label="Hauptnavigation" data-navigation>
-            <a href="#arbeit">Arbeit</a>
-            <a href="#profil">Profil</a>
-            <a href="#kontakt">Kontakt</a>
+            <div class="navigation__header" aria-hidden="true">
+                <span>Command Deck</span>
+                <span>03 Ziele</span>
+            </div>
+            <a href="#arbeit" data-nav-section="arbeit">
+                <span class="navigation__index" aria-hidden="true">01</span>
+                <span>Arbeit</span>
+                <small>Ausgewählte Systeme</small>
+            </a>
+            <a href="#profil" data-nav-section="profil">
+                <span class="navigation__index" aria-hidden="true">02</span>
+                <span>Profil</span>
+                <small>Ansatz &amp; Stack</small>
+            </a>
+            <a href="#kontakt" data-nav-section="kontakt">
+                <span class="navigation__index" aria-hidden="true">03</span>
+                <span>Kontakt</span>
+                <small>Nächster Schritt</small>
+            </a>
+            <div class="navigation__telemetry" aria-hidden="true">
+                <span><i></i> System bereit</span>
+                <span>Mobile / A11Y</span>
+            </div>
         </nav>
     </header>
 
@@ -69,7 +112,7 @@
                 <span class="mode-switch__hint" aria-hidden="true">Ansicht wechseln</span>
             </div>
 
-            <h1 id="hero-title" class="hero__title reveal">
+            <h1 id="hero-title" class="hero__title reveal" data-echo="FUNCTION / FORM / FEEL">
                 Ich baue Websites,<br>
                 die <em>funktionieren.</em>
             </h1>
@@ -86,10 +129,41 @@
                 </a>
             </div>
 
-            <div class="hero__shape" aria-hidden="true">
-                <div class="hero__shape-inner"></div>
+            <div class="hero__shape" aria-hidden="true" data-system-core>
+                <div class="hero__orbit hero__orbit--one"><span>UX</span></div>
+                <div class="hero__orbit hero__orbit--two"><span>CMS</span></div>
+                <div class="hero__shape-inner">
+                    <span class="hero__core-grid"></span>
+                    <span class="hero__core-scan"></span>
+                </div>
+                <output class="hero__coordinates" data-core-coordinates>X 50 / Y 50</output>
+            </div>
+
+            <div class="hero-code" aria-hidden="true">
+                <div class="hero-code__bar">
+                    <span>portfolio.ts</span>
+                    <span>UTF-8</span>
+                </div>
+                <ol>
+                    <li><code><b>const</b> experience = <em>createInterface</em>({</code></li>
+                    <li><code>&nbsp;&nbsp;strategy: <q>mobile-first</q>,</code></li>
+                    <li><code>&nbsp;&nbsp;accessibility: <q>WCAG</q>,</code></li>
+                    <li><code>&nbsp;&nbsp;detail: <strong>∞</strong></code></li>
+                    <li><code>});</code></li>
+                </ol>
             </div>
         </section>
+
+        <div class="signal-ribbon" aria-hidden="true">
+            <div>
+                <span>ACCESSIBLE BY DEFAULT</span><i></i>
+                <span>MOBILE FIRST</span><i></i>
+                <span>TYPO3 / FRONTEND</span><i></i>
+                <span>ACCESSIBLE BY DEFAULT</span><i></i>
+                <span>MOBILE FIRST</span><i></i>
+                <span>TYPO3 / FRONTEND</span><i></i>
+            </div>
+        </div>
 
         <section class="work section" id="arbeit" aria-labelledby="work-title" data-component="Projects / Card Stack">
             <div class="section-heading reveal">
