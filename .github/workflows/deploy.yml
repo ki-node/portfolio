@@ -3,6 +3,18 @@ name: Deploy portfolio to GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'tests/**'
+      - 'src/**/*.test.ts'
+      - '.github/workflows/ci.yml'
+      - '.github/dependabot.yml'
+      - '.github/pull_request_template.md'
+      - 'eslint.config.js'
+      - 'stylelint.config.js'
+      - 'vitest.config.ts'
+      - 'playwright.config.ts'
   workflow_dispatch:
 
 permissions:

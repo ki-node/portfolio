@@ -12,6 +12,9 @@ GitHub Pages. Mehrere Änderungen können bei Bedarf vor dem Merge in einem
 gemeinsamen Release-Branch gesammelt werden; ein dauerhafter Integrationsbranch
 ist dafür nicht nötig.
 
+Reine Änderungen an Dokumentation, Tests, Lint-Konfiguration oder dem
+CI-Workflow werden auf `main` gespeichert, lösen aber kein Pages-Deployment aus.
+
 ## Lokale Qualitätssicherung
 
 ```bash
