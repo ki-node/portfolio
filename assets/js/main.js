@@ -24,6 +24,7 @@ class PortfolioApp {
     this.scrollFrame = null;
     this.modeTransitionTimer = null;
     this.corePulseTimer = null;
+    this.coreKickTimer = null;
   }
 
   /**
@@ -333,9 +334,11 @@ class PortfolioApp {
       return;
     }
 
-    const updateCoordinates = (event) => {
-      const x = Math.min(100, Math.max(0, (event.clientX / window.innerWidth) * 100));
-      const y = Math.min(100, Math.max(0, (event.clientY / window.innerHeight) * 100));
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const updateCoordinates = (point) => {
+      const x = Math.min(100, Math.max(0, (point.clientX / window.innerWidth) * 100));
+      const y = Math.min(100, Math.max(0, (point.clientY / window.innerHeight) * 100));
       const rotateX = ((50 - y) / 50) * 4;
       const rotateY = ((x - 50) / 50) * 6;
       const panX = ((x - 50) / 50) * 1.1;
@@ -343,12 +346,15 @@ class PortfolioApp {
       const xLabel = Math.round(x).toString().padStart(2, '0');
       const yLabel = Math.round(y).toString().padStart(2, '0');
 
-      document.documentElement.style.setProperty('--core-x', `${rotateX.toFixed(2)}deg`);
-      document.documentElement.style.setProperty('--core-y', `${rotateY.toFixed(2)}deg`);
-      document.documentElement.style.setProperty('--core-pan-x', `${panX.toFixed(2)}rem`);
-      document.documentElement.style.setProperty('--core-pan-y', `${panY.toFixed(2)}rem`);
       document.documentElement.style.setProperty('--hud-x', `${x.toFixed(2)}%`);
       document.documentElement.style.setProperty('--hud-y', `${y.toFixed(2)}%`);
+
+      if (!prefersReducedMotion) {
+        document.documentElement.style.setProperty('--core-x', `${rotateX.toFixed(2)}deg`);
+        document.documentElement.style.setProperty('--core-y', `${rotateY.toFixed(2)}deg`);
+        document.documentElement.style.setProperty('--core-pan-x', `${panX.toFixed(2)}rem`);
+        document.documentElement.style.setProperty('--core-pan-y', `${panY.toFixed(2)}rem`);
+      }
 
       if (this.coreCoordinates) {
         this.coreCoordinates.textContent = `X ${xLabel} / Y ${yLabel}`;
@@ -359,11 +365,44 @@ class PortfolioApp {
       }
     };
 
+    const nudgeCore = (point) => {
+      if (prefersReducedMotion) {
+        return;
+      }
+
+      const bounds = this.systemCore.getBoundingClientRect();
+      const deltaX = bounds.left + bounds.width / 2 - point.clientX;
+      const deltaY = bounds.top + bounds.height / 2 - point.clientY;
+      const distance = Math.max(1, Math.hypot(deltaX, deltaY));
+      const kickX = (deltaX / distance) * 0.9;
+      const kickY = (deltaY / distance) * 0.7;
+
+      document.documentElement.style.setProperty('--core-kick-x', `${kickX.toFixed(2)}rem`);
+      document.documentElement.style.setProperty('--core-kick-y', `${kickY.toFixed(2)}rem`);
+
+      window.clearTimeout(this.coreKickTimer);
+      this.coreKickTimer = window.setTimeout(() => {
+        document.documentElement.style.setProperty('--core-kick-x', '0rem');
+        document.documentElement.style.setProperty('--core-kick-y', '0rem');
+      }, 280);
+    };
+
+    const updateTouchCoordinates = (event) => {
+      const touch = event.touches[0];
+
+      if (touch) {
+        updateCoordinates(touch);
+      }
+    };
+
     window.addEventListener('pointermove', updateCoordinates, { passive: true });
     window.addEventListener('pointerdown', (event) => {
       updateCoordinates(event);
+      nudgeCore(event);
       this.pulseSystemCore();
     }, { passive: true });
+    window.addEventListener('touchstart', updateTouchCoordinates, { passive: true });
+    window.addEventListener('touchmove', updateTouchCoordinates, { passive: true });
   }
 
   /**

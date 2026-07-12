@@ -3,6 +3,8 @@
     --core-y: 0deg;
     --core-pan-x: 0rem;
     --core-pan-y: 0rem;
+    --core-kick-x: 0rem;
+    --core-kick-y: 0rem;
     --hud-x: 50%;
     --hud-y: 50%;
     --xray: #8fffd2;
@@ -16,6 +18,16 @@ body {
 
 body.is-menu-open {
     overflow: hidden;
+}
+
+.ambient {
+    z-index: 0;
+}
+
+main,
+.site-footer {
+    position: relative;
+    z-index: 1;
 }
 
 .site-header {
@@ -61,7 +73,14 @@ body.is-menu-open {
 
 .hero__shape {
     pointer-events: none;
-    transform: translate3d(var(--core-pan-x), var(--core-pan-y), 0) rotateX(var(--core-x)) rotateY(var(--core-y));
+    transform:
+        translate3d(
+            calc(var(--core-pan-x) + var(--core-kick-x)),
+            calc(var(--core-pan-y) + var(--core-kick-y)),
+            0
+        )
+        rotateX(var(--core-x))
+        rotateY(var(--core-y));
     transform-style: preserve-3d;
     animation: ambient-core-float 9s ease-in-out infinite;
     transition:
@@ -73,9 +92,9 @@ body.is-menu-open {
 }
 
 .is-past-hero .hero__shape {
-    opacity: 0.28;
-    filter: saturate(0.78) blur(0.5px);
-    scale: 0.88;
+    opacity: 0.34;
+    filter: saturate(0.72) blur(1.8px);
+    scale: 0.86;
 }
 
 .hero__shape::before,
@@ -137,6 +156,35 @@ body.is-menu-open {
     border-radius: 99px;
     background: rgba(11, 5, 19, 0.82);
     box-shadow: 0 0 1rem rgba(182, 111, 255, 0.25);
+}
+
+.hero__orbit span:nth-child(2) {
+    top: 78%;
+    right: auto;
+    left: -0.9rem;
+}
+
+.hero__orbit span:nth-child(3) {
+    top: 12%;
+    right: auto;
+    left: 12%;
+}
+
+.hero__orbit--two span:first-child {
+    top: 18%;
+    right: -1rem;
+}
+
+.hero__orbit--two span:nth-child(2) {
+    top: 72%;
+    right: 8%;
+    left: auto;
+}
+
+.hero__orbit--two span:nth-child(3) {
+    top: 48%;
+    right: auto;
+    left: -1.5rem;
 }
 
 .hero__orbit--one {
