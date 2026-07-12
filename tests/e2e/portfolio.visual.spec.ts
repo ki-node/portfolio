@@ -6,7 +6,12 @@ const visualOptions = {
   maxDiffPixelRatio: 0.005,
 };
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, browserName }) => {
+  test.skip(
+    browserName === 'webkit',
+    'Pixel baselines use deterministic Chromium rendering; WebKit remains covered functionally.',
+  );
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
   await page.evaluate(async () => document.fonts.ready);
