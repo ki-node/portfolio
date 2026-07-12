@@ -2,11 +2,15 @@
 
 ## Branches
 
-- `main` ist der veröffentlichte Produktionsstand.
-- `dev` sammelt geprüfte Änderungen vor dem Release.
-- Größere Änderungen entstehen optional in kurzen Branches wie `feat/navigation` und werden zunächst nach `dev` gemergt.
+- `main` ist geschützt, jederzeit releasefähig und entspricht dem veröffentlichten Produktionsstand.
+- Jede Änderung entsteht in einem kurzen Branch wie `feat/navigation`, `fix/mobile-menu` oder `chore/dependencies`.
+- Pull Requests zielen direkt auf `main`, müssen das vollständige Quality Gate bestehen und werden per Squash gemergt.
 
-Ein Pull Request von `dev` nach `main` wird als Squash-Merge übernommen und löst genau ein Pages-Deployment aus.
+Commits und Pull Requests auf Feature-Branches lösen kein Deployment aus. Erst
+der Squash-Merge nach `main` veröffentlicht genau einen geprüften Stand über
+GitHub Pages. Mehrere Änderungen können bei Bedarf vor dem Merge in einem
+gemeinsamen Release-Branch gesammelt werden; ein dauerhafter Integrationsbranch
+ist dafür nicht nötig.
 
 ## Lokale Qualitätssicherung
 

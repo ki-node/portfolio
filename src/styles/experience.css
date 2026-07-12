@@ -873,6 +873,11 @@ main,
         text-wrap: balance;
     }
 
+    .is-code-mode .hero__title {
+        max-width: 100%;
+        font-size: clamp(2.6rem, 13vw, 4.2rem);
+    }
+
     .is-code-mode .hero {
         min-height: 60rem;
     }

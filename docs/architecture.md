@@ -7,12 +7,13 @@ Das Portfolio nutzt Vite und Vanilla TypeScript. Die Seite bleibt bewusst framew
 ## Module
 
 - `src/main.ts` bindet Fonts und Styles ein und startet die Anwendung.
-- `src/portfolio-app.ts` orchestriert DOM-basierte Features und räumt Listener sowie Observer beim Verlassen der Seite auf.
+- `src/portfolio-app.ts` komponiert kleine Controller und garantiert deren geordneten Lifecycle.
+- `src/features/` trennt Navigation, Ansichtsmodus, Seitenfortschritt, Pointer-Effekte, Viewport-Observer und den interaktiven Systemkern.
 - `src/motion/` enthält reine, unabhängig testbare Bewegungs- und Koordinatenlogik.
 - `src/styles/` trennt Fundament, Theme und progressive Experience-Layer.
 - `tests/e2e/` prüft reale mobile und Desktop-Browserzustände.
 
-Neue komplexe Features erhalten ein eigenes Verzeichnis unter `src/features/`. Mathematische oder zustandsbasierte Logik bleibt frei von DOM-Zugriffen und wird mit Vitest getestet.
+Jeder Controller implementiert `init()` und `destroy()`, besitzt seine Listener und räumt sie selbstständig auf. Abhängigkeiten werden als kleine Callbacks injiziert, statt Controller über globale Zustände miteinander zu koppeln. Mathematische oder zustandsbasierte Logik bleibt frei von DOM-Zugriffen und wird mit Vitest getestet.
 
 ## Accessibility
 
