@@ -1,30 +1,67 @@
 /**
  * Controls navigation, header state and viewport reveal animations.
  */
-class PortfolioApp {
+type PointerPoint = Pick<PointerEvent, 'clientX' | 'clientY'> | Touch;
+
+interface MotionState {
+  targetX: number;
+  targetY: number;
+  currentX: number;
+  currentY: number;
+  panX: number;
+  panY: number;
+  rotateX: number;
+  rotateY: number;
+  velocityX: number;
+  velocityY: number;
+  frame: number | null;
+  lastLabelUpdate: number;
+}
+
+export class PortfolioApp {
+  private readonly header: HTMLElement | null;
+  private readonly menuButton: HTMLButtonElement | null;
+  private readonly menuLabel: HTMLElement | null;
+  private readonly navigation: HTMLElement | null;
+  private readonly navigationLinks: NodeListOf<HTMLAnchorElement>;
+  private readonly pageContent: NodeListOf<HTMLElement>;
+  private readonly revealElements: NodeListOf<HTMLElement>;
+  private readonly modeButtons: NodeListOf<HTMLButtonElement>;
+  private readonly modeStatus: HTMLElement | null;
+  private readonly projectCards: NodeListOf<HTMLElement>;
+  private readonly systemCore: HTMLElement | null;
+  private readonly coreCoordinates: HTMLElement | null;
+  private readonly codeReticle: HTMLElement | null;
+  private readonly hudCoordinates: HTMLElement | null;
+  private readonly hudScroll: HTMLElement | null;
+  private scrollFrame: number | null;
+  private modeTransitionTimer: number | undefined;
+  private corePulseTimer: number | undefined;
+  private requestCoreRender: (() => void) | undefined;
+
   /**
    * Creates the application and caches interactive elements.
    */
   constructor() {
-    this.header = document.querySelector('[data-header]');
-    this.menuButton = document.querySelector('[data-menu-button]');
-    this.menuLabel = document.querySelector('[data-menu-label]');
-    this.navigation = document.querySelector('[data-navigation]');
-    this.navigationLinks = document.querySelectorAll('[data-nav-section]');
-    this.pageContent = document.querySelectorAll('main, footer');
-    this.revealElements = document.querySelectorAll('.reveal');
-    this.modeButtons = document.querySelectorAll('[data-mode]');
-    this.modeStatus = document.querySelector('[data-mode-status]');
-    this.projectCards = document.querySelectorAll('.project-card');
-    this.systemCore = document.querySelector('[data-system-core]');
-    this.coreCoordinates = document.querySelector('[data-core-coordinates]');
-    this.codeReticle = document.querySelector('[data-code-reticle]');
-    this.hudCoordinates = document.querySelector('[data-hud-coordinates]');
-    this.hudScroll = document.querySelector('[data-hud-scroll]');
+    this.header = document.querySelector<HTMLElement>('[data-header]');
+    this.menuButton = document.querySelector<HTMLButtonElement>('[data-menu-button]');
+    this.menuLabel = document.querySelector<HTMLElement>('[data-menu-label]');
+    this.navigation = document.querySelector<HTMLElement>('[data-navigation]');
+    this.navigationLinks = document.querySelectorAll<HTMLAnchorElement>('[data-nav-section]');
+    this.pageContent = document.querySelectorAll<HTMLElement>('main, footer');
+    this.revealElements = document.querySelectorAll<HTMLElement>('.reveal');
+    this.modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-mode]');
+    this.modeStatus = document.querySelector<HTMLElement>('[data-mode-status]');
+    this.projectCards = document.querySelectorAll<HTMLElement>('.project-card');
+    this.systemCore = document.querySelector<HTMLElement>('[data-system-core]');
+    this.coreCoordinates = document.querySelector<HTMLElement>('[data-core-coordinates]');
+    this.codeReticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    this.hudCoordinates = document.querySelector<HTMLElement>('[data-hud-coordinates]');
+    this.hudScroll = document.querySelector<HTMLElement>('[data-hud-scroll]');
     this.scrollFrame = null;
-    this.modeTransitionTimer = null;
-    this.corePulseTimer = null;
-    this.requestCoreRender = null;
+    this.modeTransitionTimer = undefined;
+    this.corePulseTimer = undefined;
+    this.requestCoreRender = undefined;
   }
 
   /**
@@ -108,7 +145,7 @@ class PortfolioApp {
    * @returns {void}
    */
   toggleMenu() {
-    const isOpen = this.menuButton.getAttribute('aria-expanded') === 'true';
+    const isOpen = this.menuButton?.getAttribute('aria-expanded') === 'true';
 
     if (isOpen) {
       this.closeMenu(true);
@@ -137,7 +174,7 @@ class PortfolioApp {
     });
 
     window.requestAnimationFrame(() => {
-      const firstLink = this.navigation?.querySelector('a');
+      const firstLink = this.navigation?.querySelector<HTMLAnchorElement>('a');
 
       firstLink?.focus();
     });
@@ -149,7 +186,7 @@ class PortfolioApp {
    * @param {boolean} restoreFocus Whether focus should return to the menu trigger.
    * @returns {void}
    */
-  closeMenu(restoreFocus = false) {
+  closeMenu(restoreFocus: boolean = false) {
     const wasOpen = this.menuButton?.getAttribute('aria-expanded') === 'true';
 
     this.menuButton?.setAttribute('aria-expanded', 'false');
@@ -175,13 +212,13 @@ class PortfolioApp {
    * @param {string} hash Target fragment identifier.
    * @returns {void}
    */
-  focusNavigationTarget(hash) {
+  focusNavigationTarget(hash: string) {
     if (!hash) {
       return;
     }
 
     window.setTimeout(() => {
-      const target = document.querySelector(hash);
+      const target = document.querySelector<HTMLElement>(hash);
 
       if (!(target instanceof HTMLElement)) {
         return;
@@ -199,12 +236,14 @@ class PortfolioApp {
    * @returns {void}
    */
   bindHeader() {
-    if (!this.header) {
+    const header = this.header;
+
+    if (!header) {
       return;
     }
 
     const updateHeader = () => {
-      this.header.classList.toggle('is-scrolled', window.scrollY > 24);
+      header.classList.toggle('is-scrolled', window.scrollY > 24);
     };
 
     updateHeader();
@@ -342,7 +381,8 @@ class PortfolioApp {
     }
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const state = {
+    const systemCore = this.systemCore;
+    const state: MotionState = {
       targetX: window.innerWidth / 2,
       targetY: window.innerHeight / 2,
       currentX: window.innerWidth / 2,
@@ -357,7 +397,7 @@ class PortfolioApp {
       lastLabelUpdate: 0,
     };
 
-    const renderFrame = (timestamp) => {
+    const renderFrame = (timestamp: number) => {
       state.currentX = state.targetX;
       state.currentY = state.targetY;
 
@@ -381,10 +421,10 @@ class PortfolioApp {
       state.velocityX *= 0.82;
       state.velocityY *= 0.82;
 
-      this.systemCore.style.setProperty('--core-pan-x', `${state.panX.toFixed(3)}rem`);
-      this.systemCore.style.setProperty('--core-pan-y', `${state.panY.toFixed(3)}rem`);
-      this.systemCore.style.setProperty('--core-x', `${state.rotateX.toFixed(3)}deg`);
-      this.systemCore.style.setProperty('--core-y', `${state.rotateY.toFixed(3)}deg`);
+      systemCore.style.setProperty('--core-pan-x', `${state.panX.toFixed(3)}rem`);
+      systemCore.style.setProperty('--core-pan-y', `${state.panY.toFixed(3)}rem`);
+      systemCore.style.setProperty('--core-x', `${state.rotateX.toFixed(3)}deg`);
+      systemCore.style.setProperty('--core-y', `${state.rotateY.toFixed(3)}deg`);
 
       if (timestamp - state.lastLabelUpdate > 80) {
         const xLabel = Math.round(x).toString().padStart(2, '0');
@@ -425,18 +465,18 @@ class PortfolioApp {
       }
     };
 
-    const setTarget = (point) => {
+    const setTarget = (point: PointerPoint) => {
       state.targetX = Math.min(window.innerWidth, Math.max(0, point.clientX));
       state.targetY = Math.min(window.innerHeight, Math.max(0, point.clientY));
       requestRender();
     };
 
-    const nudgeCore = (point) => {
+    const nudgeCore = (point: PointerPoint) => {
       if (prefersReducedMotion || !document.documentElement.classList.contains('is-past-hero')) {
         return;
       }
 
-      const bounds = this.systemCore.getBoundingClientRect();
+      const bounds = systemCore.getBoundingClientRect();
       const deltaX = bounds.left + bounds.width / 2 - point.clientX;
       const deltaY = bounds.top + bounds.height / 2 - point.clientY;
       const distance = Math.max(1, Math.hypot(deltaX, deltaY));
@@ -446,7 +486,7 @@ class PortfolioApp {
       requestRender();
     };
 
-    const updateTouchTarget = (event) => {
+    const updateTouchTarget = (event: TouchEvent) => {
       const touch = event.touches[0];
 
       if (touch) {
@@ -500,9 +540,9 @@ class PortfolioApp {
 
     const sections = Array.from(this.navigationLinks)
       .map((link) => document.getElementById(link.dataset.navSection ?? ''))
-      .filter((section) => section instanceof HTMLElement);
+      .filter((section): section is HTMLElement => section instanceof HTMLElement);
 
-    const setActiveSection = (sectionId) => {
+    const setActiveSection = (sectionId: string) => {
       this.navigationLinks.forEach((link) => {
         if (link.dataset.navSection === sectionId) {
           link.setAttribute('aria-current', 'location');
@@ -580,7 +620,3 @@ class PortfolioApp {
     this.projectCards.forEach((card) => observer.observe(card));
   }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  new PortfolioApp().init();
-});
