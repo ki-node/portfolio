@@ -39,6 +39,8 @@ aktualisiert; normale Testläufe überschreiben sie nicht.
 
 Lighthouse bewertet drei Läufe anhand ihres Medians. Accessibility, Best Practices, SEO, LCP und CLS sind harte Gates. Performance-Score und TBT werden auf den wechselnden GitHub-Runnern als Trendwerte protokolliert; harte CPU-Budgets setzen eine kontrollierte Runner-Umgebung voraus.
 
+Bei fehlgeschlagenen Browser- oder Lighthouse-Prüfungen stellt das Quality Gate die zugehörigen Berichte, Screenshots und Traces sieben Tage lang als Diagnose-Artefakte bereit. Erfolgreiche Läufe erzeugen keine zusätzlichen Uploads.
+
 Details zu Struktur und Qualitätsprinzipien stehen in [`docs/architecture.md`](docs/architecture.md), der Entwicklungsablauf in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Deployment
@@ -47,6 +49,8 @@ Details zu Struktur und Qualitätsprinzipien stehen in [`docs/architecture.md`](
 über geprüfte Pull Requests nach `main`. Ein Squash-Merge nach `main` startet
 `.github/workflows/deploy.yml` und veröffentlicht ausschließlich das von Vite
 erzeugte `dist/`-Artefakt auf GitHub Pages.
+
+Nach dem Pages-Deployment prüft ein eigener Smoke-Test die veröffentlichte HTML-Struktur sowie Favicon, Touch-Icon, Social-Preview, Robots-Datei und Sitemap direkt über die produktive URL.
 
 ## Vor Veröffentlichung anpassen
 

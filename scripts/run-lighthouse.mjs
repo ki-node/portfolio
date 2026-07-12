@@ -1,9 +1,11 @@
 import { chromium } from '@playwright/test';
 import { launch } from 'chrome-launcher';
+import { mkdir, writeFile } from 'node:fs/promises';
 import lighthouse from 'lighthouse';
 import { preview } from 'vite';
 
 const url = 'http://127.0.0.1:4173/portfolio/';
+const artifactDirectory = new URL('../artifacts/lighthouse/', import.meta.url);
 const server = await preview({
   preview: {
     host: '127.0.0.1',
@@ -18,6 +20,23 @@ const median = (values) => {
   const sortedValues = [...values].sort((a, b) => a - b);
 
   return sortedValues[Math.floor(sortedValues.length / 2)];
+};
+
+/** Writes complete Lighthouse reports and a compact summary for CI diagnostics. */
+const writeDiagnostics = async (reports, summary) => {
+  await mkdir(artifactDirectory, { recursive: true });
+  await Promise.all(
+    reports.map((report, index) =>
+      writeFile(
+        new URL(`run-${index + 1}.json`, artifactDirectory),
+        `${JSON.stringify(report, null, 2)}\n`,
+      ),
+    ),
+  );
+  await writeFile(
+    new URL('summary.json', artifactDirectory),
+    `${JSON.stringify(summary, null, 2)}\n`,
+  );
 };
 
 try {
@@ -88,6 +107,22 @@ try {
   console.log(`CLS: ${cls.toFixed(3)} / 0.100`);
   console.log(`LCP: ${Math.round(lcp)} ms / 2500 ms`);
   console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 150 ms advisory target`);
+
+  await writeDiagnostics(reports, {
+    generatedAt: new Date().toISOString(),
+    url,
+    medians: {
+      performance: performanceScore,
+      accessibility: median(reports.map((report) => report.categories.accessibility?.score ?? 0)),
+      bestPractices: median(
+        reports.map((report) => report.categories['best-practices']?.score ?? 0),
+      ),
+      seo: median(reports.map((report) => report.categories.seo?.score ?? 0)),
+      cls,
+      lcp,
+      totalBlockingTime,
+    },
+  });
 
   if (cls > 0.1) {
     failures.push(`CLS ${cls.toFixed(3)} > 0.100`);
