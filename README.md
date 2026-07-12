@@ -30,7 +30,7 @@ Details zu Struktur und Qualitätsprinzipien stehen in [`docs/architecture.md`](
 
 ## Deployment
 
-Der Branch `develop` dient der Entwicklung. Ein Squash-Merge nach `main` startet `.github/workflows/deploy.yml` und veröffentlicht ausschließlich das von Vite erzeugte `dist/`-Artefakt auf GitHub Pages.
+Der Branch `dev` dient der Entwicklung. Ein Squash-Merge nach `main` startet `.github/workflows/deploy.yml` und veröffentlicht ausschließlich das von Vite erzeugte `dist/`-Artefakt auf GitHub Pages.
 
 ## Vor Veröffentlichung anpassen
 

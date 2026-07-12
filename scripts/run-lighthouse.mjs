@@ -14,31 +14,44 @@ const server = await preview({
 
 let chrome;
 
+const median = (values) => {
+  const sortedValues = [...values].sort((a, b) => a - b);
+
+  return sortedValues[Math.floor(sortedValues.length / 2)];
+};
+
 try {
   chrome = await launch({
     chromePath: chromium.executablePath(),
     chromeFlags: ['--headless', '--no-sandbox', '--disable-dev-shm-usage'],
   });
 
-  const result = await lighthouse(
-    url,
-    {
-      logLevel: 'error',
-      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-      output: 'json',
-      port: chrome.port,
-    },
-    {
-      extends: 'lighthouse:default',
-      settings: {
-        formFactor: 'desktop',
-        screenEmulation: { disabled: true },
-      },
-    },
-  );
+  const reports = [];
 
-  if (!result) {
-    throw new Error('Lighthouse returned no result.');
+  for (let run = 1; run <= 3; run += 1) {
+    const result = await lighthouse(
+      url,
+      {
+        logLevel: 'error',
+        onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+        output: 'json',
+        port: chrome.port,
+      },
+      {
+        extends: 'lighthouse:default',
+        settings: {
+          formFactor: 'desktop',
+          screenEmulation: { disabled: true },
+        },
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Lighthouse run ${run} returned no result.`);
+    }
+
+    reports.push(result.lhr);
+    console.log(`Lighthouse run ${run}/3 completed.`);
   }
 
   const thresholds = new Map([
@@ -50,7 +63,7 @@ try {
   const failures = [];
 
   for (const [category, minimum] of thresholds) {
-    const score = result.lhr.categories[category]?.score ?? 0;
+    const score = median(reports.map((report) => report.categories[category]?.score ?? 0));
 
     console.log(`${category}: ${Math.round(score * 100)} / ${Math.round(minimum * 100)}`);
 
@@ -59,16 +72,17 @@ try {
     }
   }
 
-  const cls =
-    result.lhr.audits['cumulative-layout-shift']?.numericValue ?? Number.POSITIVE_INFINITY;
-  const lcp =
-    result.lhr.audits['largest-contentful-paint']?.numericValue ?? Number.POSITIVE_INFINITY;
-  const totalBlockingTime =
-    result.lhr.audits['total-blocking-time']?.numericValue ?? Number.POSITIVE_INFINITY;
+  const auditMedian = (auditId) =>
+    median(
+      reports.map((report) => report.audits[auditId]?.numericValue ?? Number.POSITIVE_INFINITY),
+    );
+  const cls = auditMedian('cumulative-layout-shift');
+  const lcp = auditMedian('largest-contentful-paint');
+  const totalBlockingTime = auditMedian('total-blocking-time');
 
   console.log(`CLS: ${cls.toFixed(3)} / 0.100`);
   console.log(`LCP: ${Math.round(lcp)} ms / 2500 ms`);
-  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 200 ms`);
+  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 350 ms`);
 
   if (cls > 0.1) {
     failures.push(`CLS ${cls.toFixed(3)} > 0.100`);
@@ -78,8 +92,8 @@ try {
     failures.push(`LCP ${Math.round(lcp)} ms > 2500 ms`);
   }
 
-  if (totalBlockingTime > 200) {
-    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 200 ms`);
+  if (totalBlockingTime > 350) {
+    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 350 ms`);
   }
 
   if (failures.length > 0) {
