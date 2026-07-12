@@ -14,6 +14,42 @@ test('renders without horizontal overflow', async ({ page }) => {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
 
+test('publishes complete anonymous sharing and discovery metadata', async ({ page, request }) => {
+  await page.goto('./');
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://ki-node.github.io/portfolio/',
+  );
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    'https://ki-node.github.io/portfolio/social-preview.png',
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    'content',
+    'summary_large_image',
+  );
+
+  const structuredData = await page.locator('script[type="application/ld+json"]').textContent();
+  const schema = JSON.parse(structuredData ?? '{}') as Record<string, unknown>;
+
+  expect(schema['@type']).toBe('WebSite');
+  expect(schema).not.toHaveProperty('email');
+  expect(schema).not.toHaveProperty('person');
+
+  for (const asset of [
+    'icon.svg',
+    'apple-touch-icon.png',
+    'social-preview.png',
+    'robots.txt',
+    'sitemap.xml',
+  ]) {
+    const response = await request.get(`./${asset}`);
+
+    expect(response.ok()).toBe(true);
+  }
+});
+
 test('opens and closes the mobile navigation accessibly', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'The command deck is a mobile navigation pattern.');
 
