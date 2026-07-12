@@ -57,7 +57,7 @@ try {
   const thresholds = new Map([
     ['accessibility', 1],
     ['best-practices', 0.95],
-    ['performance', 0.8],
+    ['performance', 0.9],
     ['seo', 0.95],
   ]);
   const failures = [];
@@ -82,7 +82,7 @@ try {
 
   console.log(`CLS: ${cls.toFixed(3)} / 0.100`);
   console.log(`LCP: ${Math.round(lcp)} ms / 2500 ms`);
-  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 350 ms`);
+  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 150 ms`);
 
   if (cls > 0.1) {
     failures.push(`CLS ${cls.toFixed(3)} > 0.100`);
@@ -92,8 +92,8 @@ try {
     failures.push(`LCP ${Math.round(lcp)} ms > 2500 ms`);
   }
 
-  if (totalBlockingTime > 350) {
-    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 350 ms`);
+  if (totalBlockingTime > 150) {
+    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 150 ms`);
   }
 
   if (failures.length > 0) {
