@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="assets/css/theme-violet.css">
+    <link rel="stylesheet" href="assets/css/enhancements.css">
     <script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
@@ -22,6 +23,13 @@
         <div class="ambient__grid"></div>
         <div class="ambient__noise"></div>
     </div>
+
+    <div class="scroll-core" aria-hidden="true">
+        <span class="scroll-core__ring"></span>
+        <span class="scroll-core__node"></span>
+    </div>
+
+    <p class="sr-only" aria-live="polite" data-mode-status></p>
 
     <header class="site-header" data-header>
         <a class="wordmark" href="#top" aria-label="Zur Startseite">
@@ -43,10 +51,22 @@
     </header>
 
     <main id="main">
-        <section class="hero" id="top" aria-labelledby="hero-title">
+        <section class="hero" id="top" aria-labelledby="hero-title" data-component="Hero / CSS Grid">
             <div class="hero__eyebrow reveal">
                 <span class="status-dot" aria-hidden="true"></span>
                 Webentwicklung / Frontend
+            </div>
+
+            <div class="hero__tools reveal">
+                <div class="mode-switch" role="group" aria-label="Darstellungsmodus">
+                    <button class="mode-switch__button is-active" type="button" aria-pressed="true" data-mode="design">
+                        Design
+                    </button>
+                    <button class="mode-switch__button" type="button" aria-pressed="false" data-mode="code">
+                        Code
+                    </button>
+                </div>
+                <span class="mode-switch__hint" aria-hidden="true">Ansicht wechseln</span>
             </div>
 
             <h1 id="hero-title" class="hero__title reveal">
@@ -71,14 +91,14 @@
             </div>
         </section>
 
-        <section class="work section" id="arbeit" aria-labelledby="work-title">
+        <section class="work section" id="arbeit" aria-labelledby="work-title" data-component="Projects / Card Stack">
             <div class="section-heading reveal">
                 <p class="kicker">01 / Ausgewählte Arbeit</p>
                 <h2 id="work-title">Lösungen mit Substanz.</h2>
             </div>
 
             <div class="project-list">
-                <article class="project-card project-card--lime reveal">
+                <article class="project-card project-card--lime reveal" data-component="ProjectCard / CMS">
                     <div class="project-card__meta">
                         <span>TYPO3 / Relaunch</span>
                         <span>01</span>
@@ -92,10 +112,18 @@
                     <div class="project-card__copy">
                         <h3>Komplex im System.<br>Einfach in der Nutzung.</h3>
                         <p>Redaktionell flexible Websites mit klaren Komponenten, sauberer Datenstruktur und langfristig wartbarer Technik.</p>
+                        <details class="project-details">
+                            <summary>Technische Details</summary>
+                            <div class="project-details__content">
+                                <span>Komponentenbibliothek</span>
+                                <span>Redaktionelle Vorschau</span>
+                                <span>Barrierearme Templates</span>
+                            </div>
+                        </details>
                     </div>
                 </article>
 
-                <article class="project-card project-card--orange reveal">
+                <article class="project-card project-card--orange reveal" data-component="ProjectCard / Design System">
                     <div class="project-card__meta">
                         <span>Frontend / Designsystem</span>
                         <span>02</span>
@@ -106,10 +134,18 @@
                     <div class="project-card__copy">
                         <h3>Ein System.<br>Viele Möglichkeiten.</h3>
                         <p>Modulare Oberflächen, die konsistent aussehen, schnell reagieren und sich auch nach dem nächsten Relaunch noch gut anfühlen.</p>
+                        <details class="project-details">
+                            <summary>Technische Details</summary>
+                            <div class="project-details__content">
+                                <span>Design Tokens</span>
+                                <span>Container Queries</span>
+                                <span>Dokumentierte Varianten</span>
+                            </div>
+                        </details>
                     </div>
                 </article>
 
-                <article class="project-card project-card--violet reveal">
+                <article class="project-card project-card--violet reveal" data-component="ProjectCard / Performance">
                     <div class="project-card__meta">
                         <span>Upgrade / Optimierung</span>
                         <span>03</span>
@@ -122,12 +158,20 @@
                     <div class="project-card__copy">
                         <h3>Schneller. Stabiler.<br>Zukunftsfähig.</h3>
                         <p>Technische Modernisierung ohne unnötige Reibung – von Versions-Upgrades bis Performance und Barrierefreiheit.</p>
+                        <details class="project-details">
+                            <summary>Technische Details</summary>
+                            <div class="project-details__content">
+                                <span>Core Web Vitals</span>
+                                <span>Progressive Enhancement</span>
+                                <span>Automatisierte Checks</span>
+                            </div>
+                        </details>
                     </div>
                 </article>
             </div>
         </section>
 
-        <section class="profile section" id="profil" aria-labelledby="profile-title">
+        <section class="profile section" id="profil" aria-labelledby="profile-title" data-component="Profile / Content Grid">
             <div class="profile__intro reveal">
                 <p class="kicker">02 / Profil</p>
                 <h2 id="profile-title">Zwischen Code,<br>Konzept und <em>Klartext.</em></h2>
@@ -163,7 +207,7 @@
             </div>
         </section>
 
-        <section class="contact" id="kontakt" aria-labelledby="contact-title">
+        <section class="contact" id="kontakt" aria-labelledby="contact-title" data-component="Contact / CTA">
             <div class="contact__top reveal">
                 <p class="kicker">03 / Kontakt</p>
                 <p>Ein Projekt, ein Problem oder einfach eine gute Idee?</p>
