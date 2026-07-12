@@ -1,40 +1,20 @@
-import { spawn } from 'node:child_process';
-
 import { chromium } from '@playwright/test';
 import { launch } from 'chrome-launcher';
 import lighthouse from 'lighthouse';
+import { preview } from 'vite';
 
 const url = 'http://127.0.0.1:4173/portfolio/';
-const server = spawn(
-  process.platform === 'win32' ? 'npm.cmd' : 'npm',
-  ['run', 'preview', '--', '--host', '127.0.0.1', '--port', '4173', '--strictPort'],
-  { stdio: ['ignore', 'pipe', 'pipe'] },
-);
-
-const waitForServer = async () => {
-  const deadline = Date.now() + 20_000;
-
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(url);
-
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // The preview server is still starting.
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-
-  throw new Error('Vite preview did not become ready within 20 seconds.');
-};
+const server = await preview({
+  preview: {
+    host: '127.0.0.1',
+    port: 4173,
+    strictPort: true,
+  },
+});
 
 let chrome;
 
 try {
-  await waitForServer();
   chrome = await launch({
     chromePath: chromium.executablePath(),
     chromeFlags: ['--headless', '--no-sandbox', '--disable-dev-shm-usage'],
@@ -107,5 +87,5 @@ try {
   }
 } finally {
   await chrome?.kill();
-  server.kill('SIGTERM');
+  await server.close();
 }
