@@ -19,17 +19,20 @@ test('opens and closes the mobile navigation accessibly', async ({ page, isMobil
 
   await page.goto('./');
 
-  const trigger = page.getByRole('button', { name: 'Menü öffnen' });
+  const trigger = page.locator('[data-menu-button]');
   const navigation = page.getByRole('navigation', { name: 'Hauptnavigation' });
 
+  await expect(trigger).toHaveAccessibleName('Menü öffnen');
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(trigger).toHaveAccessibleName('Menü schließen');
   await expect(navigation).toBeVisible();
   await expect(page.locator('main')).toHaveAttribute('inert', '');
   await expect(navigation.getByRole('link').first()).toBeFocused();
 
   await page.keyboard.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toHaveAccessibleName('Menü öffnen');
   await expect(trigger).toBeFocused();
   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
 });
@@ -51,7 +54,9 @@ test('switches between design and X-Ray code modes', async ({ page }) => {
   await expect(page.locator('html')).not.toHaveClass(/is-code-mode/);
 });
 
-test('has no automatically detectable WCAG A/AA violations', async ({ page }) => {
+test('has no automatically detectable WCAG A/AA violations', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'axe-core is validated in mobile and desktop Chromium.');
+
   await page.goto('./');
 
   const results = await new AxeBuilder({ page })
@@ -65,11 +70,14 @@ test('honours reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./');
 
-  const animationDurations = await page.locator('.ambient__orb--one').evaluate((element) => {
+  const animationDurationMs = await page.locator('.ambient__orb--one').evaluate((element) => {
     const style = getComputedStyle(element);
+    const duration = style.animationDuration.trim();
 
-    return style.animationDuration;
+    return duration.endsWith('ms')
+      ? Number.parseFloat(duration)
+      : Number.parseFloat(duration) * 1000;
   });
 
-  expect(animationDurations).toBe('0.01ms');
+  expect(animationDurationMs).toBeLessThanOrEqual(0.01);
 });
