@@ -4,6 +4,8 @@ Mobile-first Portfolio mit Vite, Vanilla TypeScript, lokal gebündelten Fonts un
 
 Die dargestellten Projektsituationen sind bewusst anonymisiert und verzichten auf Kundennamen, personenbezogene Angaben und unbelegte Kennzahlen.
 
+Canonical URL, Open Graph, Twitter Card, strukturierte Website-Daten, Sitemap und Social-Preview sind auf die öffentliche GitHub-Pages-Adresse abgestimmt und enthalten keine personenbezogenen Angaben.
+
 ## Voraussetzungen
 
 - Node.js 22 (`.nvmrc`)
