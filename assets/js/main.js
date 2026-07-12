@@ -8,12 +8,22 @@ class PortfolioApp {
   constructor() {
     this.header = document.querySelector('[data-header]');
     this.menuButton = document.querySelector('[data-menu-button]');
+    this.menuLabel = document.querySelector('[data-menu-label]');
     this.navigation = document.querySelector('[data-navigation]');
+    this.navigationLinks = document.querySelectorAll('[data-nav-section]');
+    this.pageContent = document.querySelectorAll('main, footer');
     this.revealElements = document.querySelectorAll('.reveal');
     this.modeButtons = document.querySelectorAll('[data-mode]');
     this.modeStatus = document.querySelector('[data-mode-status]');
     this.projectCards = document.querySelectorAll('.project-card');
+    this.systemCore = document.querySelector('[data-system-core]');
+    this.coreCoordinates = document.querySelector('[data-core-coordinates]');
+    this.codeReticle = document.querySelector('[data-code-reticle]');
+    this.hudCoordinates = document.querySelector('[data-hud-coordinates]');
+    this.hudScroll = document.querySelector('[data-hud-scroll]');
     this.scrollFrame = null;
+    this.modeTransitionTimer = null;
+    this.corePulseTimer = null;
   }
 
   /**
@@ -28,6 +38,8 @@ class PortfolioApp {
     this.bindModeSwitch();
     this.bindPageProgress();
     this.bindPointerEffects();
+    this.bindSystemCore();
+    this.observeNavigationSections();
     this.observeRevealElements();
     this.observeProjectCards();
   }
@@ -61,15 +73,32 @@ class PortfolioApp {
 
     this.navigation.addEventListener('click', (event) => {
       if (event.target instanceof HTMLAnchorElement) {
-        this.closeMenu();
+        this.closeMenu(false);
+        this.focusNavigationTarget(event.target.hash);
+        return;
+      }
+
+      const link = event.target instanceof Element
+        ? event.target.closest('a')
+        : null;
+
+      if (link instanceof HTMLAnchorElement) {
+        this.closeMenu(false);
+        this.focusNavigationTarget(link.hash);
       }
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        this.closeMenu();
+        this.closeMenu(true);
       }
     });
+
+    window.addEventListener('resize', () => {
+      if (window.matchMedia('(min-width: 50.0625rem)').matches) {
+        this.closeMenu(false);
+      }
+    }, { passive: true });
   }
 
   /**
@@ -80,18 +109,87 @@ class PortfolioApp {
   toggleMenu() {
     const isOpen = this.menuButton.getAttribute('aria-expanded') === 'true';
 
-    this.menuButton.setAttribute('aria-expanded', String(!isOpen));
-    this.navigation.classList.toggle('is-open', !isOpen);
+    if (isOpen) {
+      this.closeMenu(true);
+      return;
+    }
+
+    this.openMenu();
   }
 
   /**
-   * Closes the mobile navigation.
+   * Opens the mobile command deck and isolates the background content.
    *
    * @returns {void}
    */
-  closeMenu() {
+  openMenu() {
+    this.menuButton?.setAttribute('aria-expanded', 'true');
+    this.navigation?.classList.add('is-open');
+    document.body.classList.add('is-menu-open');
+
+    if (this.menuLabel) {
+      this.menuLabel.textContent = 'Menü schließen';
+    }
+
+    this.pageContent.forEach((element) => {
+      element.inert = true;
+    });
+
+    window.requestAnimationFrame(() => {
+      const firstLink = this.navigation?.querySelector('a');
+
+      firstLink?.focus();
+    });
+  }
+
+  /**
+   * Closes the mobile command deck.
+   *
+   * @param {boolean} restoreFocus Whether focus should return to the menu trigger.
+   * @returns {void}
+   */
+  closeMenu(restoreFocus = false) {
+    const wasOpen = this.menuButton?.getAttribute('aria-expanded') === 'true';
+
     this.menuButton?.setAttribute('aria-expanded', 'false');
     this.navigation?.classList.remove('is-open');
+    document.body.classList.remove('is-menu-open');
+
+    if (this.menuLabel) {
+      this.menuLabel.textContent = 'Menü öffnen';
+    }
+
+    this.pageContent.forEach((element) => {
+      element.inert = false;
+    });
+
+    if (wasOpen && restoreFocus) {
+      this.menuButton?.focus();
+    }
+  }
+
+  /**
+   * Moves focus to the selected in-page destination after navigation.
+   *
+   * @param {string} hash Target fragment identifier.
+   * @returns {void}
+   */
+  focusNavigationTarget(hash) {
+    if (!hash) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const target = document.querySelector(hash);
+
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      target.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+      target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+    }, 0);
   }
 
   /**
@@ -131,6 +229,13 @@ class PortfolioApp {
         }
 
         document.documentElement.classList.toggle('is-code-mode', mode === 'code');
+        document.documentElement.dataset.view = mode;
+        document.documentElement.classList.add('is-mode-transitioning');
+
+        window.clearTimeout(this.modeTransitionTimer);
+        this.modeTransitionTimer = window.setTimeout(() => {
+          document.documentElement.classList.remove('is-mode-transitioning');
+        }, 560);
 
         this.modeButtons.forEach((item) => {
           const isActive = item.dataset.mode === mode;
@@ -141,8 +246,12 @@ class PortfolioApp {
 
         if (this.modeStatus) {
           this.modeStatus.textContent = mode === 'code'
-            ? 'Code-Ansicht aktiviert.'
+            ? 'Code-Ansicht mit technischen X-Ray-Informationen aktiviert.'
             : 'Design-Ansicht aktiviert.';
+        }
+
+        if (mode === 'code') {
+          this.pulseSystemCore();
         }
       });
     });
@@ -160,6 +269,13 @@ class PortfolioApp {
 
       document.documentElement.style.setProperty('--page-progress', progress.toFixed(4));
       document.documentElement.classList.toggle('is-near-page-end', progress > 0.94);
+
+      if (this.hudScroll) {
+        const percentage = Math.round(progress * 100).toString().padStart(3, '0');
+
+        this.hudScroll.textContent = `SCROLL ${percentage}%`;
+      }
+
       this.scrollFrame = null;
     };
 
@@ -204,6 +320,110 @@ class PortfolioApp {
         card.style.removeProperty('--pointer-y');
       });
     });
+  }
+
+  /**
+   * Makes the hero system core and code reticle respond to touch and pointer input.
+   *
+   * @returns {void}
+   */
+  bindSystemCore() {
+    if (!this.systemCore) {
+      return;
+    }
+
+    const hero = this.systemCore.closest('.hero');
+
+    if (!(hero instanceof HTMLElement)) {
+      return;
+    }
+
+    const updateCoordinates = (event) => {
+      const bounds = hero.getBoundingClientRect();
+      const x = Math.min(100, Math.max(0, ((event.clientX - bounds.left) / bounds.width) * 100));
+      const y = Math.min(100, Math.max(0, ((event.clientY - bounds.top) / bounds.height) * 100));
+      const rotateX = ((50 - y) / 50) * 8;
+      const rotateY = ((x - 50) / 50) * 10;
+      const xLabel = Math.round(x).toString().padStart(2, '0');
+      const yLabel = Math.round(y).toString().padStart(2, '0');
+
+      document.documentElement.style.setProperty('--core-x', `${rotateX.toFixed(2)}deg`);
+      document.documentElement.style.setProperty('--core-y', `${rotateY.toFixed(2)}deg`);
+      document.documentElement.style.setProperty('--hud-x', `${x.toFixed(2)}%`);
+      document.documentElement.style.setProperty('--hud-y', `${y.toFixed(2)}%`);
+
+      if (this.coreCoordinates) {
+        this.coreCoordinates.textContent = `X ${xLabel} / Y ${yLabel}`;
+      }
+
+      if (this.hudCoordinates) {
+        this.hudCoordinates.textContent = `X ${xLabel} / Y ${yLabel}`;
+      }
+    };
+
+    hero.addEventListener('pointermove', updateCoordinates, { passive: true });
+    hero.addEventListener('pointerdown', (event) => {
+      updateCoordinates(event);
+      this.pulseSystemCore();
+    }, { passive: true });
+  }
+
+  /**
+   * Briefly energizes the hero core while respecting reduced-motion preferences.
+   *
+   * @returns {void}
+   */
+  pulseSystemCore() {
+    if (!this.systemCore || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    this.systemCore.classList.add('is-energized');
+    window.clearTimeout(this.corePulseTimer);
+    this.corePulseTimer = window.setTimeout(() => {
+      this.systemCore?.classList.remove('is-energized');
+    }, 620);
+  }
+
+  /**
+   * Tracks the current content section and exposes it to the navigation.
+   *
+   * @returns {void}
+   */
+  observeNavigationSections() {
+    if (!this.navigationLinks.length || !('IntersectionObserver' in window)) {
+      return;
+    }
+
+    const sections = Array.from(this.navigationLinks)
+      .map((link) => document.getElementById(link.dataset.navSection ?? ''))
+      .filter((section) => section instanceof HTMLElement);
+
+    const setActiveSection = (sectionId) => {
+      this.navigationLinks.forEach((link) => {
+        if (link.dataset.navSection === sectionId) {
+          link.setAttribute('aria-current', 'location');
+          return;
+        }
+
+        link.removeAttribute('aria-current');
+      });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      const activeEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (activeEntry?.target instanceof HTMLElement) {
+        setActiveSection(activeEntry.target.id);
+      }
+    }, {
+      rootMargin: '-32% 0px -55% 0px',
+      threshold: [0.05, 0.2, 0.5],
+    });
+
+    sections.forEach((section) => observer.observe(section));
   }
 
   /**
