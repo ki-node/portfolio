@@ -45,8 +45,6 @@ export class PortfolioApp {
   private corePulseTimer: number | undefined;
   private requestCoreRender: (() => void) | undefined;
   private stopCoreRender: (() => void) | undefined;
-  private enhancementFrame: number | null = null;
-  private readonly enhancementTimers: number[] = [];
   private readonly abortController = new AbortController();
   private readonly observers: IntersectionObserver[] = [];
 
@@ -86,8 +84,12 @@ export class PortfolioApp {
     this.bindMenu();
     this.bindHeader();
     this.bindModeSwitch();
+    this.bindPageProgress();
+    this.bindPointerEffects();
+    this.bindSystemCore();
+    this.observeNavigationSections();
     this.observeRevealElements();
-    this.scheduleProgressiveEnhancements();
+    this.observeProjectCards();
   }
 
   /** Releases listeners, observers, timers and queued animation frames. */
@@ -96,37 +98,11 @@ export class PortfolioApp {
     this.observers.forEach((observer) => observer.disconnect());
     window.clearTimeout(this.modeTransitionTimer);
     window.clearTimeout(this.corePulseTimer);
-    this.enhancementTimers.forEach((timer) => window.clearTimeout(timer));
     this.stopCoreRender?.();
-
-    if (this.enhancementFrame !== null) {
-      window.cancelAnimationFrame(this.enhancementFrame);
-    }
 
     if (this.scrollFrame !== null) {
       window.cancelAnimationFrame(this.scrollFrame);
     }
-  }
-
-  /** Defers non-critical enhancements until after the first rendered frame. */
-  scheduleProgressiveEnhancements() {
-    const enhancements = [
-      () => this.bindPageProgress(),
-      () => this.bindSystemCore(),
-      () => this.bindPointerEffects(),
-      () => this.observeNavigationSections(),
-      () => this.observeProjectCards(),
-    ];
-
-    this.enhancementFrame = window.requestAnimationFrame(() => {
-      enhancements.forEach((enhancement, index) => {
-        const timer = window.setTimeout(enhancement, index * 16);
-
-        this.enhancementTimers.push(timer);
-      });
-
-      this.enhancementFrame = null;
-    });
   }
 
   /**
