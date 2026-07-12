@@ -30,6 +30,8 @@ npm run lighthouse
 
 `npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports, einschließlich eines kompakten 320-Pixel-iPhone-Viewports und eines kurzen Querformats. Die Browser-Suite prüft außerdem Tastaturfokus, Reflow, reduzierte Bewegung und erzwungene Systemfarben; axe prüft zentrale WCAG-A/AA-Regeln.
 
+Vitest prüft neben der reinen Bewegungslogik auch alle Controller-Lifecycles in einer isolierten DOM-Umgebung. Dabei werden insbesondere Listener, Observer, Timer, Animation Frames und kurzlebige Zustände nach `destroy()` kontrolliert.
+
 Die Browser-Suite enthält deterministische visuelle Regressionstests in mobilem
 und Desktop-Chromium. WebKit bleibt funktional abgedeckt, weil kontinuierliche
 Compositor-Effekte dort keine stabilen Pixel-Baselines ergeben. Neue

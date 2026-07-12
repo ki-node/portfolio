@@ -50,6 +50,7 @@ export class SystemCoreController implements Controller {
   destroy() {
     this.abortController.abort();
     window.clearTimeout(this.pulseTimer);
+    this.core?.classList.remove('is-energized');
 
     if (this.state?.frame !== null && this.state?.frame !== undefined) {
       window.cancelAnimationFrame(this.state.frame);

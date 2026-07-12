@@ -20,6 +20,7 @@ export class ViewModeController implements Controller {
   destroy() {
     this.abortController.abort();
     window.clearTimeout(this.transitionTimer);
+    document.documentElement.classList.remove('is-mode-transitioning');
   }
 
   private activate(mode: string | undefined) {
