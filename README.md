@@ -1,10 +1,13 @@
 # Anonymisierte Portfolio-Vorschau
 
-Mobile-first Portfolio mit Vite, Vanilla TypeScript und gebündeltem CSS.
+Mobile-first Portfolio mit Vite, Vanilla TypeScript, lokal gebündelten Fonts und automatisierter WCAG-, Browser- und Performance-Qualitätssicherung.
+
+## Voraussetzungen
+
+- Node.js 22 (`.nvmrc`)
+- npm 10 oder neuer
 
 ## Entwicklung
-
-Voraussetzung: Node.js 22 oder neuer.
 
 ```bash
 npm ci
@@ -16,24 +19,21 @@ Vite zeigt die lokale URL im Terminal an und aktualisiert Änderungen per HMR.
 ## Qualitätssicherung
 
 ```bash
-npm run typecheck
-npm run build
-npm run preview
+npm run check
+npm run test:e2e
+npm run lighthouse
 ```
 
-Der Produktionsbuild wird nach `dist/` geschrieben. Vite versieht JavaScript
-und CSS automatisch mit Content-Hashes.
+`npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports; axe prüft zentrale WCAG-A/AA-Regeln.
+
+Details zu Struktur und Qualitätsprinzipien stehen in [`docs/architecture.md`](docs/architecture.md), der Entwicklungsablauf in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Deployment
 
-Der Branch `develop` dient der Entwicklung. Ein Squash-Merge nach `main`
-startet `.github/workflows/deploy.yml`, prüft TypeScript, baut die Seite und
-veröffentlicht das `dist/`-Artefakt auf GitHub Pages.
+Der Branch `develop` dient der Entwicklung. Ein Squash-Merge nach `main` startet `.github/workflows/deploy.yml` und veröffentlicht ausschließlich das von Vite erzeugte `dist/`-Artefakt auf GitHub Pages.
 
 ## Vor Veröffentlichung anpassen
 
 - In `index.html` die Platzhalter-E-Mail `kontakt@example.com` ersetzen.
 - Projekttexte und Technologien bei Bedarf konkretisieren.
-
-Die Seite verwendet Google Fonts. Für einen vollständig lokalen Betrieb können
-die Schriften heruntergeladen und selbst eingebunden werden.
+- Keine personenbezogenen Daten oder Secrets einchecken.

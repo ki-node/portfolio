@@ -1,19 +1,25 @@
+import {
+  advanceCorePose,
+  calculateCoreTarget,
+  formatCoordinateLabel,
+  isCoreSettled,
+  normalizeViewportPoint,
+  type CorePose,
+  type NormalizedPoint,
+  type ViewportPoint,
+} from './motion/core-motion';
+
 /**
  * Controls navigation, header state and viewport reveal animations.
  */
-type PointerPoint = Pick<PointerEvent, 'clientX' | 'clientY'> | Touch;
 
 interface MotionState {
   targetX: number;
   targetY: number;
   currentX: number;
   currentY: number;
-  panX: number;
-  panY: number;
-  rotateX: number;
-  rotateY: number;
-  velocityX: number;
-  velocityY: number;
+  pose: CorePose;
+  normalizedPoint: NormalizedPoint;
   frame: number | null;
   lastLabelUpdate: number;
 }
@@ -38,6 +44,9 @@ export class PortfolioApp {
   private modeTransitionTimer: number | undefined;
   private corePulseTimer: number | undefined;
   private requestCoreRender: (() => void) | undefined;
+  private stopCoreRender: (() => void) | undefined;
+  private readonly abortController = new AbortController();
+  private readonly observers: IntersectionObserver[] = [];
 
   /**
    * Creates the application and caches interactive elements.
@@ -62,6 +71,7 @@ export class PortfolioApp {
     this.modeTransitionTimer = undefined;
     this.corePulseTimer = undefined;
     this.requestCoreRender = undefined;
+    this.stopCoreRender = undefined;
   }
 
   /**
@@ -80,6 +90,19 @@ export class PortfolioApp {
     this.observeNavigationSections();
     this.observeRevealElements();
     this.observeProjectCards();
+  }
+
+  /** Releases listeners, observers, timers and queued animation frames. */
+  destroy() {
+    this.abortController.abort();
+    this.observers.forEach((observer) => observer.disconnect());
+    window.clearTimeout(this.modeTransitionTimer);
+    window.clearTimeout(this.corePulseTimer);
+    this.stopCoreRender?.();
+
+    if (this.scrollFrame !== null) {
+      window.cancelAnimationFrame(this.scrollFrame);
+    }
   }
 
   /**
@@ -107,36 +130,48 @@ export class PortfolioApp {
       return;
     }
 
-    this.menuButton.addEventListener('click', () => this.toggleMenu());
+    const signal = this.abortController.signal;
 
-    this.navigation.addEventListener('click', (event) => {
-      if (event.target instanceof HTMLAnchorElement) {
-        this.closeMenu(false);
-        this.focusNavigationTarget(event.target.hash);
-        return;
-      }
+    this.menuButton.addEventListener('click', () => this.toggleMenu(), { signal });
 
-      const link = event.target instanceof Element
-        ? event.target.closest('a')
-        : null;
+    this.navigation.addEventListener(
+      'click',
+      (event) => {
+        if (event.target instanceof HTMLAnchorElement) {
+          this.closeMenu(false);
+          this.focusNavigationTarget(event.target.hash);
+          return;
+        }
 
-      if (link instanceof HTMLAnchorElement) {
-        this.closeMenu(false);
-        this.focusNavigationTarget(link.hash);
-      }
-    });
+        const link = event.target instanceof Element ? event.target.closest('a') : null;
 
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        this.closeMenu(true);
-      }
-    });
+        if (link instanceof HTMLAnchorElement) {
+          this.closeMenu(false);
+          this.focusNavigationTarget(link.hash);
+        }
+      },
+      { signal },
+    );
 
-    window.addEventListener('resize', () => {
-      if (window.matchMedia('(min-width: 50.0625rem)').matches) {
-        this.closeMenu(false);
-      }
-    }, { passive: true });
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key === 'Escape') {
+          this.closeMenu(true);
+        }
+      },
+      { signal },
+    );
+
+    window.addEventListener(
+      'resize',
+      () => {
+        if (window.matchMedia('(min-width: 50.0625rem)').matches) {
+          this.closeMenu(false);
+        }
+      },
+      { passive: true, signal },
+    );
   }
 
   /**
@@ -202,7 +237,7 @@ export class PortfolioApp {
     });
 
     if (wasOpen && restoreFocus) {
-      this.menuButton?.focus();
+      this.menuButton.focus();
     }
   }
 
@@ -226,7 +261,10 @@ export class PortfolioApp {
 
       target.setAttribute('tabindex', '-1');
       target.focus({ preventScroll: true });
-      target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true });
+      target.addEventListener('blur', () => target.removeAttribute('tabindex'), {
+        once: true,
+        signal: this.abortController.signal,
+      });
     }, 0);
   }
 
@@ -247,7 +285,10 @@ export class PortfolioApp {
     };
 
     updateHeader();
-    window.addEventListener('scroll', updateHeader, { passive: true });
+    window.addEventListener('scroll', updateHeader, {
+      passive: true,
+      signal: this.abortController.signal,
+    });
   }
 
   /**
@@ -261,39 +302,44 @@ export class PortfolioApp {
     }
 
     this.modeButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const mode = button.dataset.mode;
+      button.addEventListener(
+        'click',
+        () => {
+          const mode = button.dataset.mode;
 
-        if (!mode) {
-          return;
-        }
+          if (!mode) {
+            return;
+          }
 
-        document.documentElement.classList.toggle('is-code-mode', mode === 'code');
-        document.documentElement.dataset.view = mode;
-        document.documentElement.classList.add('is-mode-transitioning');
+          document.documentElement.classList.toggle('is-code-mode', mode === 'code');
+          document.documentElement.dataset.view = mode;
+          document.documentElement.classList.add('is-mode-transitioning');
 
-        window.clearTimeout(this.modeTransitionTimer);
-        this.modeTransitionTimer = window.setTimeout(() => {
-          document.documentElement.classList.remove('is-mode-transitioning');
-        }, 560);
+          window.clearTimeout(this.modeTransitionTimer);
+          this.modeTransitionTimer = window.setTimeout(() => {
+            document.documentElement.classList.remove('is-mode-transitioning');
+          }, 560);
 
-        this.modeButtons.forEach((item) => {
-          const isActive = item.dataset.mode === mode;
+          this.modeButtons.forEach((item) => {
+            const isActive = item.dataset.mode === mode;
 
-          item.classList.toggle('is-active', isActive);
-          item.setAttribute('aria-pressed', String(isActive));
-        });
+            item.classList.toggle('is-active', isActive);
+            item.setAttribute('aria-pressed', String(isActive));
+          });
 
-        if (this.modeStatus) {
-          this.modeStatus.textContent = mode === 'code'
-            ? 'Code-Ansicht mit technischen X-Ray-Informationen aktiviert.'
-            : 'Design-Ansicht aktiviert.';
-        }
+          if (this.modeStatus) {
+            this.modeStatus.textContent =
+              mode === 'code'
+                ? 'Code-Ansicht mit technischen X-Ray-Informationen aktiviert.'
+                : 'Design-Ansicht aktiviert.';
+          }
 
-        if (mode === 'code') {
-          this.pulseSystemCore();
-        }
-      });
+          if (mode === 'code') {
+            this.pulseSystemCore();
+          }
+        },
+        { signal: this.abortController.signal },
+      );
     });
   }
 
@@ -310,7 +356,8 @@ export class PortfolioApp {
       document.documentElement.style.setProperty('--page-progress', progress.toFixed(4));
       document.documentElement.classList.toggle('is-near-page-end', progress > 0.94);
       const isPastHero = window.scrollY > window.innerHeight * 0.62;
-      const didCrossHeroBoundary = document.documentElement.classList.contains('is-past-hero') !== isPastHero;
+      const didCrossHeroBoundary =
+        document.documentElement.classList.contains('is-past-hero') !== isPastHero;
 
       document.documentElement.classList.toggle('is-past-hero', isPastHero);
 
@@ -319,7 +366,9 @@ export class PortfolioApp {
       }
 
       if (this.hudScroll) {
-        const percentage = Math.round(progress * 100).toString().padStart(3, '0');
+        const percentage = Math.round(progress * 100)
+          .toString()
+          .padStart(3, '0');
 
         this.hudScroll.textContent = `SCROLL ${percentage}%`;
       }
@@ -336,8 +385,14 @@ export class PortfolioApp {
     };
 
     updateProgress();
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate, { passive: true });
+    window.addEventListener('scroll', requestUpdate, {
+      passive: true,
+      signal: this.abortController.signal,
+    });
+    window.addEventListener('resize', requestUpdate, {
+      passive: true,
+      signal: this.abortController.signal,
+    });
   }
 
   /**
@@ -354,19 +409,27 @@ export class PortfolioApp {
     }
 
     this.projectCards.forEach((card) => {
-      card.addEventListener('pointermove', (event) => {
-        const bounds = card.getBoundingClientRect();
-        const x = ((event.clientX - bounds.left) / bounds.width) * 100;
-        const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+      card.addEventListener(
+        'pointermove',
+        (event) => {
+          const bounds = card.getBoundingClientRect();
+          const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+          const y = ((event.clientY - bounds.top) / bounds.height) * 100;
 
-        card.style.setProperty('--pointer-x', `${x.toFixed(2)}%`);
-        card.style.setProperty('--pointer-y', `${y.toFixed(2)}%`);
-      });
+          card.style.setProperty('--pointer-x', `${x.toFixed(2)}%`);
+          card.style.setProperty('--pointer-y', `${y.toFixed(2)}%`);
+        },
+        { signal: this.abortController.signal },
+      );
 
-      card.addEventListener('pointerleave', () => {
-        card.style.removeProperty('--pointer-x');
-        card.style.removeProperty('--pointer-y');
-      });
+      card.addEventListener(
+        'pointerleave',
+        () => {
+          card.style.removeProperty('--pointer-x');
+          card.style.removeProperty('--pointer-y');
+        },
+        { signal: this.abortController.signal },
+      );
     });
   }
 
@@ -387,12 +450,18 @@ export class PortfolioApp {
       targetY: window.innerHeight / 2,
       currentX: window.innerWidth / 2,
       currentY: window.innerHeight / 2,
-      panX: 0,
-      panY: 0,
-      rotateX: 0,
-      rotateY: 0,
-      velocityX: 0,
-      velocityY: 0,
+      pose: {
+        panX: 0,
+        panY: 0,
+        rotateX: 0,
+        rotateY: 0,
+        velocityX: 0,
+        velocityY: 0,
+      },
+      normalizedPoint: normalizeViewportPoint(
+        { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 },
+        { width: window.innerWidth, height: window.innerHeight },
+      ),
       frame: null,
       lastLabelUpdate: 0,
     };
@@ -406,30 +475,25 @@ export class PortfolioApp {
         `translate3d(${state.currentX.toFixed(2)}px, ${state.currentY.toFixed(2)}px, 0) translate(-50%, -50%)`,
       );
 
-      const x = Math.min(100, Math.max(0, (state.currentX / window.innerWidth) * 100));
-      const y = Math.min(100, Math.max(0, (state.currentY / window.innerHeight) * 100));
+      state.normalizedPoint = normalizeViewportPoint(
+        { clientX: state.currentX, clientY: state.currentY },
+        { width: window.innerWidth, height: window.innerHeight },
+      );
       const isPastHero = document.documentElement.classList.contains('is-past-hero');
-      const targetPanX = isPastHero && !prefersReducedMotion ? ((x - 50) / 50) * 1.35 : 0;
-      const targetPanY = isPastHero && !prefersReducedMotion ? ((y - 50) / 50) * 1.05 : 0;
-      const targetRotateX = isPastHero && !prefersReducedMotion ? ((50 - y) / 50) * 4 : 0;
-      const targetRotateY = isPastHero && !prefersReducedMotion ? ((x - 50) / 50) * 6 : 0;
+      const target = calculateCoreTarget(
+        state.normalizedPoint,
+        isPastHero && !prefersReducedMotion,
+      );
 
-      state.panX += (targetPanX - state.panX) * 0.1 + state.velocityX;
-      state.panY += (targetPanY - state.panY) * 0.1 + state.velocityY;
-      state.rotateX += (targetRotateX - state.rotateX) * 0.12;
-      state.rotateY += (targetRotateY - state.rotateY) * 0.12;
-      state.velocityX *= 0.82;
-      state.velocityY *= 0.82;
+      state.pose = advanceCorePose(state.pose, target);
 
-      systemCore.style.setProperty('--core-pan-x', `${state.panX.toFixed(3)}rem`);
-      systemCore.style.setProperty('--core-pan-y', `${state.panY.toFixed(3)}rem`);
-      systemCore.style.setProperty('--core-x', `${state.rotateX.toFixed(3)}deg`);
-      systemCore.style.setProperty('--core-y', `${state.rotateY.toFixed(3)}deg`);
+      systemCore.style.setProperty('--core-pan-x', `${state.pose.panX.toFixed(3)}rem`);
+      systemCore.style.setProperty('--core-pan-y', `${state.pose.panY.toFixed(3)}rem`);
+      systemCore.style.setProperty('--core-x', `${state.pose.rotateX.toFixed(3)}deg`);
+      systemCore.style.setProperty('--core-y', `${state.pose.rotateY.toFixed(3)}deg`);
 
       if (timestamp - state.lastLabelUpdate > 80) {
-        const xLabel = Math.round(x).toString().padStart(2, '0');
-        const yLabel = Math.round(y).toString().padStart(2, '0');
-        const label = `X ${xLabel} / Y ${yLabel}`;
+        const label = formatCoordinateLabel(state.normalizedPoint);
 
         if (this.coreCoordinates) {
           this.coreCoordinates.textContent = label;
@@ -442,14 +506,10 @@ export class PortfolioApp {
         state.lastLabelUpdate = timestamp;
       }
 
-      const pointerSettled = Math.abs(state.targetX - state.currentX) < 0.2
-        && Math.abs(state.targetY - state.currentY) < 0.2;
-      const coreSettled = Math.abs(targetPanX - state.panX) < 0.005
-        && Math.abs(targetPanY - state.panY) < 0.005
-        && Math.abs(targetRotateX - state.rotateX) < 0.01
-        && Math.abs(targetRotateY - state.rotateY) < 0.01
-        && Math.abs(state.velocityX) < 0.001
-        && Math.abs(state.velocityY) < 0.001;
+      const pointerSettled =
+        Math.abs(state.targetX - state.currentX) < 0.2 &&
+        Math.abs(state.targetY - state.currentY) < 0.2;
+      const coreSettled = isCoreSettled(state.pose, target);
 
       if (!pointerSettled || !coreSettled) {
         state.frame = window.requestAnimationFrame(renderFrame);
@@ -460,18 +520,21 @@ export class PortfolioApp {
     };
 
     const requestRender = () => {
-      if (state.frame === null) {
-        state.frame = window.requestAnimationFrame(renderFrame);
-      }
+      state.frame ??= window.requestAnimationFrame(renderFrame);
     };
 
-    const setTarget = (point: PointerPoint) => {
-      state.targetX = Math.min(window.innerWidth, Math.max(0, point.clientX));
-      state.targetY = Math.min(window.innerHeight, Math.max(0, point.clientY));
+    const setTarget = (point: ViewportPoint) => {
+      const normalizedPoint = normalizeViewportPoint(point, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+
+      state.targetX = normalizedPoint.clientX;
+      state.targetY = normalizedPoint.clientY;
       requestRender();
     };
 
-    const nudgeCore = (point: PointerPoint) => {
+    const nudgeCore = (point: ViewportPoint) => {
       if (prefersReducedMotion || !document.documentElement.classList.contains('is-past-hero')) {
         return;
       }
@@ -481,8 +544,8 @@ export class PortfolioApp {
       const deltaY = bounds.top + bounds.height / 2 - point.clientY;
       const distance = Math.max(1, Math.hypot(deltaX, deltaY));
 
-      state.velocityX += (deltaX / distance) * 0.075;
-      state.velocityY += (deltaY / distance) * 0.055;
+      state.pose.velocityX += (deltaX / distance) * 0.075;
+      state.pose.velocityY += (deltaY / distance) * 0.055;
       requestRender();
     };
 
@@ -495,20 +558,36 @@ export class PortfolioApp {
     };
 
     this.requestCoreRender = requestRender;
-
-    window.addEventListener('pointermove', setTarget, { passive: true });
-    window.addEventListener('pointerdown', (event) => {
-      setTarget(event);
-      nudgeCore(event);
-
-      if (document.documentElement.classList.contains('is-past-hero')) {
-        this.pulseSystemCore();
+    this.stopCoreRender = () => {
+      if (state.frame !== null) {
+        window.cancelAnimationFrame(state.frame);
+        state.frame = null;
       }
-    }, { passive: true });
-    window.addEventListener('touchstart', (event) => {
-      updateTouchTarget(event);
-    }, { passive: true });
-    window.addEventListener('touchmove', updateTouchTarget, { passive: true });
+    };
+
+    const signal = this.abortController.signal;
+
+    window.addEventListener('pointermove', setTarget, { passive: true, signal });
+    window.addEventListener(
+      'pointerdown',
+      (event) => {
+        setTarget(event);
+        nudgeCore(event);
+
+        if (document.documentElement.classList.contains('is-past-hero')) {
+          this.pulseSystemCore();
+        }
+      },
+      { passive: true, signal },
+    );
+    window.addEventListener(
+      'touchstart',
+      (event) => {
+        updateTouchTarget(event);
+      },
+      { passive: true, signal },
+    );
+    window.addEventListener('touchmove', updateTouchTarget, { passive: true, signal });
   }
 
   /**
@@ -553,18 +632,23 @@ export class PortfolioApp {
       });
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      const activeEntry = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const activeEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
-      if (activeEntry?.target instanceof HTMLElement) {
-        setActiveSection(activeEntry.target.id);
-      }
-    }, {
-      rootMargin: '-32% 0px -55% 0px',
-      threshold: [0.05, 0.2, 0.5],
-    });
+        if (activeEntry?.target instanceof HTMLElement) {
+          setActiveSection(activeEntry.target.id);
+        }
+      },
+      {
+        rootMargin: '-32% 0px -55% 0px',
+        threshold: [0.05, 0.2, 0.5],
+      },
+    );
+
+    this.observers.push(observer);
 
     sections.forEach((section) => observer.observe(section));
   }
@@ -580,19 +664,24 @@ export class PortfolioApp {
       return;
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) {
-          return;
-        }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
 
-        entry.target.classList.add('is-visible');
-        observer.unobserve(entry.target);
-      });
-    }, {
-      rootMargin: '0px 0px -8% 0px',
-      threshold: 0.08,
-    });
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        rootMargin: '0px 0px -8% 0px',
+        threshold: 0.08,
+      },
+    );
+
+    this.observers.push(observer);
 
     this.revealElements.forEach((element) => observer.observe(element));
   }
@@ -608,14 +697,19 @@ export class PortfolioApp {
       return;
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        entry.target.classList.toggle('is-in-view', entry.isIntersecting);
-      });
-    }, {
-      rootMargin: '-22% 0px -22% 0px',
-      threshold: 0.15,
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          entry.target.classList.toggle('is-in-view', entry.isIntersecting);
+        });
+      },
+      {
+        rootMargin: '-22% 0px -22% 0px',
+        threshold: 0.15,
+      },
+    );
+
+    this.observers.push(observer);
 
     this.projectCards.forEach((card) => observer.observe(card));
   }
