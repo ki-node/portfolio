@@ -18,6 +18,8 @@
 }
 
 html {
+    max-width: 100%;
+    overflow-x: clip;
     scroll-behavior: smooth;
 }
 
@@ -55,7 +57,7 @@ a {
     padding: 0;
     margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
 }

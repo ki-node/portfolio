@@ -748,7 +748,7 @@ main,
         right: 0;
         display: flex;
         min-width: 0;
-        width: 100vw;
+        width: 100%;
         min-height: 100dvh;
         flex-direction: column;
         gap: 0;

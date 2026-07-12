@@ -1,4 +1,8 @@
 node_modules/
 dist/
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
 .DS_Store
 *.log
