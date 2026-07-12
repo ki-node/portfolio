@@ -49,6 +49,13 @@ test('switches between design and X-Ray code modes', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/is-code-mode/);
   await expect(page.locator('[data-mode-status]')).toContainText('Code-Ansicht');
 
+  const titleBoundary = await page.locator('.hero__title').evaluate((element) => ({
+    right: element.getBoundingClientRect().right,
+    viewportWidth: window.innerWidth,
+  }));
+
+  expect(titleBoundary.right).toBeLessThanOrEqual(titleBoundary.viewportWidth + 1);
+
   await designButton.click();
   await expect(designButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('html')).not.toHaveClass(/is-code-mode/);
