@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Anonymisierte Portfolio-Vorschau für moderne Webentwicklung, Frontend und CMS-Lösungen.">
+    <meta name="theme-color" content="#090511">
+    <title>Portfolio – Webentwicklung</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/theme-violet.css">
+    <script type="module" src="assets/js/main.js"></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+    <div class="ambient" aria-hidden="true">
+        <div class="ambient__orb ambient__orb--one"></div>
+        <div class="ambient__orb ambient__orb--two"></div>
+        <div class="ambient__grid"></div>
+        <div class="ambient__noise"></div>
+    </div>
+
+    <header class="site-header" data-header>
+        <a class="wordmark" href="#top" aria-label="Zur Startseite">
+            <span>PF</span>
+            <span class="wordmark__dot" aria-hidden="true"></span>
+        </a>
+
+        <button class="menu-button" type="button" aria-expanded="false" aria-controls="navigation" data-menu-button>
+            <span class="sr-only">Menü öffnen</span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav class="navigation" id="navigation" aria-label="Hauptnavigation" data-navigation>
+            <a href="#arbeit">Arbeit</a>
+            <a href="#profil">Profil</a>
+            <a href="#kontakt">Kontakt</a>
+        </nav>
+    </header>
+
+    <main id="main">
+        <section class="hero" id="top" aria-labelledby="hero-title">
+            <div class="hero__eyebrow reveal">
+                <span class="status-dot" aria-hidden="true"></span>
+                Webentwicklung / Frontend
+            </div>
+
+            <h1 id="hero-title" class="hero__title reveal">
+                Ich baue Websites,<br>
+                die <em>funktionieren.</em>
+            </h1>
+
+            <div class="hero__bottom reveal">
+                <p>
+                    Durchdachte Frontends, belastbare TYPO3-Lösungen und ein
+                    Blick fürs Detail – ohne Technik um der Technik willen.
+                </p>
+                <a class="round-link" href="#arbeit" aria-label="Ausgewählte Arbeit ansehen">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 4v16M5 13l7 7 7-7"/>
+                    </svg>
+                </a>
+            </div>
+
+            <div class="hero__shape" aria-hidden="true">
+                <div class="hero__shape-inner"></div>
+            </div>
+        </section>
+
+        <section class="work section" id="arbeit" aria-labelledby="work-title">
+            <div class="section-heading reveal">
+                <p class="kicker">01 / Ausgewählte Arbeit</p>
+                <h2 id="work-title">Lösungen mit Substanz.</h2>
+            </div>
+
+            <div class="project-list">
+                <article class="project-card project-card--lime reveal">
+                    <div class="project-card__meta">
+                        <span>TYPO3 / Relaunch</span>
+                        <span>01</span>
+                    </div>
+                    <div class="project-card__visual project-card__visual--browser" aria-hidden="true">
+                        <div class="browser-bar"><i></i><i></i><i></i></div>
+                        <div class="browser-content">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                    <div class="project-card__copy">
+                        <h3>Komplex im System.<br>Einfach in der Nutzung.</h3>
+                        <p>Redaktionell flexible Websites mit klaren Komponenten, sauberer Datenstruktur und langfristig wartbarer Technik.</p>
+                    </div>
+                </article>
+
+                <article class="project-card project-card--orange reveal">
+                    <div class="project-card__meta">
+                        <span>Frontend / Designsystem</span>
+                        <span>02</span>
+                    </div>
+                    <div class="project-card__visual project-card__visual--grid" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="project-card__copy">
+                        <h3>Ein System.<br>Viele Möglichkeiten.</h3>
+                        <p>Modulare Oberflächen, die konsistent aussehen, schnell reagieren und sich auch nach dem nächsten Relaunch noch gut anfühlen.</p>
+                    </div>
+                </article>
+
+                <article class="project-card project-card--violet reveal">
+                    <div class="project-card__meta">
+                        <span>Upgrade / Optimierung</span>
+                        <span>03</span>
+                    </div>
+                    <div class="project-card__visual project-card__visual--speed" aria-hidden="true">
+                        <strong>98</strong>
+                        <span>Performance</span>
+                        <div></div>
+                    </div>
+                    <div class="project-card__copy">
+                        <h3>Schneller. Stabiler.<br>Zukunftsfähig.</h3>
+                        <p>Technische Modernisierung ohne unnötige Reibung – von Versions-Upgrades bis Performance und Barrierefreiheit.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="profile section" id="profil" aria-labelledby="profile-title">
+            <div class="profile__intro reveal">
+                <p class="kicker">02 / Profil</p>
+                <h2 id="profile-title">Zwischen Code,<br>Konzept und <em>Klartext.</em></h2>
+            </div>
+
+            <div class="profile__content reveal">
+                <p class="profile__lead">
+                    Ich entwickle digitale Lösungen, die nicht nur im Screenshot
+                    gut aussehen, sondern sich im Alltag bewähren.
+                </p>
+                <p>
+                    Mein Schwerpunkt liegt auf TYPO3 und modernem Frontend. Ich
+                    übersetze Anforderungen in verständliche, robuste Technik –
+                    sorgfältig umgesetzt und pragmatisch im Alltag.
+                </p>
+
+                <dl class="facts">
+                    <div><dt>Basis</dt><dd>Remote</dd></div>
+                    <div><dt>Schwerpunkt</dt><dd>TYPO3 & Frontend</dd></div>
+                    <div><dt>Arbeitsweise</dt><dd>Pragmatisch & präzise</dd></div>
+                </dl>
+            </div>
+
+            <div class="skills reveal" aria-label="Technologien und Kompetenzen">
+                <span>TYPO3</span>
+                <span>PHP</span>
+                <span>JavaScript</span>
+                <span>CSS</span>
+                <span>Accessibility</span>
+                <span>Performance</span>
+                <span>DDEV</span>
+                <span>Git</span>
+            </div>
+        </section>
+
+        <section class="contact" id="kontakt" aria-labelledby="contact-title">
+            <div class="contact__top reveal">
+                <p class="kicker">03 / Kontakt</p>
+                <p>Ein Projekt, ein Problem oder einfach eine gute Idee?</p>
+            </div>
+            <h2 id="contact-title" class="reveal">Lass uns<br><em>reden.</em></h2>
+            <div class="contact__actions reveal">
+                <!-- TODO: Replace with a real email address before publishing. -->
+                <a class="contact-link" href="mailto:kontakt@example.com">
+                    <span>Nachricht schreiben</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M8 5h11v11"/></svg>
+                </a>
+                <a class="contact-link" href="#arbeit">
+                    <span>Leistungen ansehen</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M8 5h11v11"/></svg>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <span>© <span data-year></span> Portfolio / Webentwicklung</span>
+        <a href="#top">Nach oben ↑</a>
+    </footer>
+</body>
+</html>
