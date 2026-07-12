@@ -269,6 +269,7 @@ class PortfolioApp {
 
       document.documentElement.style.setProperty('--page-progress', progress.toFixed(4));
       document.documentElement.classList.toggle('is-near-page-end', progress > 0.94);
+      document.documentElement.classList.toggle('is-past-hero', window.scrollY > window.innerHeight * 0.62);
 
       if (this.hudScroll) {
         const percentage = Math.round(progress * 100).toString().padStart(3, '0');
@@ -332,23 +333,20 @@ class PortfolioApp {
       return;
     }
 
-    const hero = this.systemCore.closest('.hero');
-
-    if (!(hero instanceof HTMLElement)) {
-      return;
-    }
-
     const updateCoordinates = (event) => {
-      const bounds = hero.getBoundingClientRect();
-      const x = Math.min(100, Math.max(0, ((event.clientX - bounds.left) / bounds.width) * 100));
-      const y = Math.min(100, Math.max(0, ((event.clientY - bounds.top) / bounds.height) * 100));
-      const rotateX = ((50 - y) / 50) * 8;
-      const rotateY = ((x - 50) / 50) * 10;
+      const x = Math.min(100, Math.max(0, (event.clientX / window.innerWidth) * 100));
+      const y = Math.min(100, Math.max(0, (event.clientY / window.innerHeight) * 100));
+      const rotateX = ((50 - y) / 50) * 4;
+      const rotateY = ((x - 50) / 50) * 6;
+      const panX = ((x - 50) / 50) * 1.1;
+      const panY = ((y - 50) / 50) * 0.85;
       const xLabel = Math.round(x).toString().padStart(2, '0');
       const yLabel = Math.round(y).toString().padStart(2, '0');
 
       document.documentElement.style.setProperty('--core-x', `${rotateX.toFixed(2)}deg`);
       document.documentElement.style.setProperty('--core-y', `${rotateY.toFixed(2)}deg`);
+      document.documentElement.style.setProperty('--core-pan-x', `${panX.toFixed(2)}rem`);
+      document.documentElement.style.setProperty('--core-pan-y', `${panY.toFixed(2)}rem`);
       document.documentElement.style.setProperty('--hud-x', `${x.toFixed(2)}%`);
       document.documentElement.style.setProperty('--hud-y', `${y.toFixed(2)}%`);
 
@@ -361,8 +359,8 @@ class PortfolioApp {
       }
     };
 
-    hero.addEventListener('pointermove', updateCoordinates, { passive: true });
-    hero.addEventListener('pointerdown', (event) => {
+    window.addEventListener('pointermove', updateCoordinates, { passive: true });
+    window.addEventListener('pointerdown', (event) => {
       updateCoordinates(event);
       this.pulseSystemCore();
     }, { passive: true });
