@@ -1,6 +1,8 @@
 :root {
     --core-x: 0deg;
     --core-y: 0deg;
+    --core-pan-x: 0rem;
+    --core-pan-y: 0rem;
     --hud-x: 50%;
     --hud-y: 50%;
     --xray: #8fffd2;
@@ -58,10 +60,22 @@ body.is-menu-open {
 }
 
 .hero__shape {
-    transform: rotateX(var(--core-x)) rotateY(var(--core-y)) translateZ(0);
+    pointer-events: none;
+    transform: translate3d(var(--core-pan-x), var(--core-pan-y), 0) rotateX(var(--core-x)) rotateY(var(--core-y));
     transform-style: preserve-3d;
-    transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: ambient-core-float 9s ease-in-out infinite;
+    transition:
+        opacity 420ms ease,
+        filter 420ms ease,
+        scale 420ms ease,
+        transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
     will-change: transform;
+}
+
+.is-past-hero .hero__shape {
+    opacity: 0.28;
+    filter: saturate(0.78) blur(0.5px);
+    scale: 0.88;
 }
 
 .hero__shape::before,
@@ -159,6 +173,17 @@ body.is-menu-open {
 @keyframes core-scan {
     0%, 100% { transform: translateY(-70%); }
     55% { transform: translateY(70%); }
+}
+
+@keyframes ambient-core-float {
+    0%, 100% {
+        margin-top: -0.35rem;
+        margin-right: 0.2rem;
+    }
+    50% {
+        margin-top: 1rem;
+        margin-right: -0.8rem;
+    }
 }
 
 @keyframes orbit-one {
@@ -306,7 +331,7 @@ body.is-menu-open {
     border-radius: 50%;
     opacity: 0.72;
     translate: -50% -50%;
-    transition: top 120ms linear, left 120ms linear;
+    transition: none;
 }
 
 .code-hud__reticle span {
@@ -586,6 +611,17 @@ body.is-menu-open {
         pointer-events: none;
     }
 
+    .site-header.is-scrolled {
+        background: rgba(9, 5, 17, 0.9);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .is-menu-open .site-header.is-scrolled {
+        border-color: transparent;
+        background: transparent;
+    }
+
     .wordmark,
     .menu-button,
     .navigation a {
@@ -618,25 +654,43 @@ body.is-menu-open {
     }
 
     .menu-button__glyph {
-        display: grid;
+        position: relative;
+        display: block;
         width: 1.1rem !important;
-        gap: 0.28rem;
+        height: 1.1rem !important;
+        transform: none !important;
     }
 
     .menu-button__glyph i {
+        position: absolute;
+        top: 50%;
+        left: 50%;
         display: block;
-        width: 100%;
+        width: 1.1rem;
         height: 1px;
         background: currentColor;
+        transform-origin: center;
         transition: transform 200ms ease;
     }
 
+    .menu-button__glyph i:first-child {
+        transform: translate(-50%, -0.2rem);
+    }
+
+    .menu-button__glyph i:nth-child(2) {
+        transform: translate(-50%, 0.2rem);
+    }
+
+    .menu-button[aria-expanded="true"] > .menu-button__glyph {
+        transform: none !important;
+    }
+
     .menu-button[aria-expanded="true"] .menu-button__glyph i:first-child {
-        transform: translateY(0.145rem) rotate(45deg);
+        transform: translate(-50%, -50%) rotate(45deg);
     }
 
     .menu-button[aria-expanded="true"] .menu-button__glyph i:nth-child(2) {
-        transform: translateY(-0.145rem) rotate(-45deg);
+        transform: translate(-50%, -50%) rotate(-45deg);
     }
 
     .navigation {
@@ -647,6 +701,8 @@ body.is-menu-open {
         right: 0;
         display: flex;
         min-width: 0;
+        width: 100vw;
+        min-height: 100dvh;
         flex-direction: column;
         gap: 0;
         padding:
@@ -659,6 +715,7 @@ body.is-menu-open {
             linear-gradient(90deg, rgba(215, 174, 255, 0.05) 1px, transparent 1px),
             radial-gradient(circle at 82% 20%, rgba(150, 72, 227, 0.28), transparent 18rem),
             rgba(8, 4, 15, 0.97);
+        background-color: #08040f;
         background-size: 2rem 2rem, 2rem 2rem, auto, auto;
         box-shadow: none;
         clip-path: circle(0 at calc(100% - 3rem) 3rem);
@@ -777,6 +834,10 @@ body.is-menu-open {
         top: 20%;
         right: -28%;
         opacity: 0.52;
+    }
+
+    .code-hud__terminal {
+        display: none;
     }
 
     .is-code-mode .hero-code {
@@ -909,6 +970,7 @@ body.is-menu-open {
 
     .hero__orbit,
     .hero__core-scan,
+    .hero__shape,
     .signal-ribbon > div {
         animation: none;
     }
