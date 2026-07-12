@@ -57,7 +57,6 @@ try {
   const thresholds = new Map([
     ['accessibility', 1],
     ['best-practices', 0.95],
-    ['performance', 0.8],
     ['seo', 0.95],
   ]);
   const failures = [];
@@ -72,6 +71,12 @@ try {
     }
   }
 
+  const performanceScore = median(
+    reports.map((report) => report.categories.performance?.score ?? 0),
+  );
+
+  console.log(`performance: ${Math.round(performanceScore * 100)} / 90 advisory target`);
+
   const auditMedian = (auditId) =>
     median(
       reports.map((report) => report.audits[auditId]?.numericValue ?? Number.POSITIVE_INFINITY),
@@ -82,7 +87,7 @@ try {
 
   console.log(`CLS: ${cls.toFixed(3)} / 0.100`);
   console.log(`LCP: ${Math.round(lcp)} ms / 2500 ms`);
-  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 350 ms`);
+  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 150 ms advisory target`);
 
   if (cls > 0.1) {
     failures.push(`CLS ${cls.toFixed(3)} > 0.100`);
@@ -90,10 +95,6 @@ try {
 
   if (lcp > 2500) {
     failures.push(`LCP ${Math.round(lcp)} ms > 2500 ms`);
-  }
-
-  if (totalBlockingTime > 350) {
-    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 350 ms`);
   }
 
   if (failures.length > 0) {

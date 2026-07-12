@@ -26,6 +26,8 @@ npm run lighthouse
 
 `npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports; axe prüft zentrale WCAG-A/AA-Regeln.
 
+Lighthouse bewertet drei Läufe anhand ihres Medians. Accessibility, Best Practices, SEO, LCP und CLS sind harte Gates. Performance-Score und TBT werden auf den wechselnden GitHub-Runnern als Trendwerte protokolliert; harte CPU-Budgets setzen eine kontrollierte Runner-Umgebung voraus.
+
 Details zu Struktur und Qualitätsprinzipien stehen in [`docs/architecture.md`](docs/architecture.md), der Entwicklungsablauf in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Deployment

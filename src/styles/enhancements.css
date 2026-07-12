@@ -287,3 +287,25 @@
         transition: none;
     }
 }
+
+@supports (content-visibility: auto) {
+    .project-card,
+    .profile,
+    .contact,
+    .site-footer {
+        content-visibility: auto;
+    }
+
+    .project-card {
+        contain-intrinsic-size: auto 46rem;
+    }
+
+    .profile,
+    .contact {
+        contain-intrinsic-size: auto 58rem;
+    }
+
+    .site-footer {
+        contain-intrinsic-size: auto 5rem;
+    }
+}
