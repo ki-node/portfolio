@@ -15,6 +15,8 @@ Das Portfolio nutzt Vite und Vanilla TypeScript. Die Seite bleibt bewusst framew
 
 Jeder Controller implementiert `init()` und `destroy()`, besitzt seine Listener und räumt sie selbstständig auf. Abhängigkeiten werden als kleine Callbacks injiziert, statt Controller über globale Zustände miteinander zu koppeln. Mathematische oder zustandsbasierte Logik bleibt frei von DOM-Zugriffen und wird mit Vitest getestet.
 
+Die Controller-Lifecycles werden zusätzlich in einer isolierten DOM-Umgebung geprüft. Die Tests sichern sichtbares Verhalten sowie das Entfernen von Listenern, Observern, Timern, Animation Frames und kurzlebigen CSS-Zuständen beim Aufräumen ab.
+
 ## Accessibility
 
 - Mobile-first und WCAG 2.2 AA sind Mindeststandard.
