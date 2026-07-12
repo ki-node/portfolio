@@ -24,7 +24,7 @@ npm run test:e2e
 npm run lighthouse
 ```
 
-`npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports; axe prüft zentrale WCAG-A/AA-Regeln.
+`npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports, einschließlich eines kompakten 320-Pixel-iPhone-Viewports und eines kurzen Querformats. Die Browser-Suite prüft außerdem Tastaturfokus, Reflow, reduzierte Bewegung und erzwungene Systemfarben; axe prüft zentrale WCAG-A/AA-Regeln.
 
 Die Browser-Suite enthält deterministische visuelle Regressionstests in mobilem
 und Desktop-Chromium. WebKit bleibt funktional abgedeckt, weil kontinuierliche
