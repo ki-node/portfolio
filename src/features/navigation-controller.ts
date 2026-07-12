@@ -44,6 +44,8 @@ export class NavigationController implements Controller {
       (event) => {
         if (event.key === 'Escape') {
           this.closeMenu(true);
+        } else if (event.key === 'Tab') {
+          this.trapMenuFocus(event);
         }
       },
       { signal },
@@ -107,6 +109,35 @@ export class NavigationController implements Controller {
 
     if (wasOpen && restoreFocus) {
       this.menuButton.focus();
+    }
+  }
+
+  private trapMenuFocus(event: KeyboardEvent) {
+    if (this.menuButton?.getAttribute('aria-expanded') !== 'true' || !this.navigation) {
+      return;
+    }
+
+    const focusableElements = [
+      this.menuButton,
+      ...this.navigation.querySelectorAll<HTMLAnchorElement>('a[href]'),
+    ];
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements.at(-1);
+    const activeElement = document.activeElement;
+
+    if (!firstElement || !lastElement) {
+      return;
+    }
+
+    if (event.shiftKey && activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    } else if (!focusableElements.some((element) => element === activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? lastElement : firstElement).focus();
     }
   }
 

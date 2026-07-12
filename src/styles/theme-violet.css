@@ -508,7 +508,7 @@ body {
     color: #bdb3c7;
 }
 
-:where(a, button):focus-visible {
+:where(a, button, summary):focus-visible {
     outline: 3px solid #efceff;
     outline-offset: 5px;
     border-radius: 0.2rem;
@@ -569,5 +569,20 @@ body {
     .hero__shape::before,
     .profile::after {
         animation: none;
+    }
+}
+
+@media (forced-colors: active) {
+    .hero__title em,
+    .contact h2 em,
+    .profile h2 em,
+    .project-card__visual--speed strong {
+        color: CanvasText;
+        background: none;
+        filter: none;
+    }
+
+    :where(a, button, summary):focus-visible {
+        outline-color: Highlight;
     }
 }

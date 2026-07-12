@@ -28,13 +28,80 @@ test('opens and closes the mobile navigation accessibly', async ({ page, isMobil
   await expect(trigger).toHaveAccessibleName('Menü schließen');
   await expect(navigation).toBeVisible();
   await expect(page.locator('main')).toHaveAttribute('inert', '');
-  await expect(navigation.getByRole('link').first()).toBeFocused();
+  const navigationLinks = navigation.getByRole('link');
+
+  await expect(navigationLinks.first()).toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(navigationLinks.last()).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(trigger).toBeFocused();
+
+  await navigationLinks.first().click();
+  await expect(page.locator('#arbeit')).toBeFocused();
+
+  const focusPosition = await page.locator('#arbeit').evaluate((element) => ({
+    targetTop: element.getBoundingClientRect().top,
+    headerBottom:
+      document.querySelector<HTMLElement>('[data-header]')?.getBoundingClientRect().bottom ?? 0,
+  }));
+
+  expect(focusPosition.targetTop).toBeGreaterThanOrEqual(focusPosition.headerBottom - 1);
+
+  await trigger.click();
 
   await page.keyboard.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toHaveAccessibleName('Menü öffnen');
   await expect(trigger).toBeFocused();
   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+});
+
+test('reflows at 320 CSS pixels without clipping controls', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('./');
+
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+
+  for (const control of [
+    page.locator('[data-menu-button]'),
+    page.getByRole('button', { name: 'Design' }),
+    page.getByRole('button', { name: 'Code' }),
+  ]) {
+    const bounds = await control.boundingBox();
+
+    expect(bounds).not.toBeNull();
+    expect(bounds?.x).toBeGreaterThanOrEqual(0);
+    expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(321);
+    expect(bounds?.width).toBeGreaterThanOrEqual(24);
+    expect(bounds?.height).toBeGreaterThanOrEqual(24);
+  }
+});
+
+test('keeps the command deck usable in a short landscape viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 568, height: 320 });
+  await page.goto('./');
+
+  const trigger = page.locator('[data-menu-button]');
+  const navigation = page.getByRole('navigation', { name: 'Hauptnavigation' });
+  const lastLink = navigation.getByRole('link').last();
+
+  await trigger.click();
+  await lastLink.scrollIntoViewIfNeeded();
+  await expect(lastLink).toBeVisible();
+
+  const bounds = await lastLink.boundingBox();
+
+  expect(bounds).not.toBeNull();
+  expect(bounds?.y).toBeGreaterThanOrEqual(0);
+  expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(321);
 });
 
 test('switches between design and X-Ray code modes', async ({ page }) => {
@@ -87,4 +154,28 @@ test('honours reduced motion', async ({ page }) => {
   });
 
   expect(animationDurationMs).toBeLessThanOrEqual(0.01);
+});
+
+test('keeps text and focus visible in forced-colors mode', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'Forced-colors emulation is Chromium-only.');
+
+  await page.emulateMedia({ forcedColors: 'active' });
+  await page.goto('./');
+
+  const emphasizedTitleColor = await page
+    .locator('.hero__title em')
+    .evaluate((element) => getComputedStyle(element).color);
+
+  expect(emphasizedTitleColor).not.toBe('rgba(0, 0, 0, 0)');
+
+  const codeButton = page.getByRole('button', { name: 'Code' });
+
+  await codeButton.focus();
+  await expect(codeButton).toBeFocused();
+
+  const outlineStyle = await codeButton.evaluate(
+    (element) => getComputedStyle(element).outlineStyle,
+  );
+
+  expect(outlineStyle).not.toBe('none');
 });

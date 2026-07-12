@@ -22,6 +22,14 @@ export default defineConfig({
       use: { ...devices['iPhone 15'] },
     },
     {
+      name: 'compact-mobile-webkit',
+      use: {
+        ...devices['iPhone 15'],
+        viewport: { width: 320, height: 568 },
+        screen: { width: 320, height: 568 },
+      },
+    },
+    {
       name: 'desktop-chromium',
       use: { ...devices['Desktop Chrome'] },
     },
