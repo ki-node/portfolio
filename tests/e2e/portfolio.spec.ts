@@ -128,10 +128,34 @@ test('switches between design and X-Ray code modes', async ({ page }) => {
   await expect(page.locator('html')).not.toHaveClass(/is-code-mode/);
 });
 
+test('reveals structured anonymized case studies without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto('./');
+
+  const firstProject = page.locator('.project-card').first();
+  const details = firstProject.locator('details');
+
+  await firstProject.getByText('Technische Details').click();
+  await expect(details).toHaveAttribute('open', '');
+  await expect(firstProject.getByText('Ausgangslage')).toBeVisible();
+  await expect(firstProject.getByText('Umsetzung')).toBeVisible();
+  await expect(firstProject.getByText('Wirkung')).toBeVisible();
+
+  const dimensions = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+});
+
 test('has no automatically detectable WCAG A/AA violations', async ({ page, browserName }) => {
   test.skip(browserName === 'webkit', 'axe-core is validated in mobile and desktop Chromium.');
 
   await page.goto('./');
+  await page.locator('.project-details').evaluateAll((detailsElements) => {
+    detailsElements.forEach((details) => details.setAttribute('open', ''));
+  });
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
