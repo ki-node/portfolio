@@ -159,7 +159,7 @@
 
 .project-details summary {
     position: relative;
-    min-height: 2.75rem;
+    min-height: 3rem;
     padding: 0.9rem 2rem 0.9rem 0;
     color: #e6deed;
     font: 500 0.72rem var(--mono);
