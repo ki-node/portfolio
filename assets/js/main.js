@@ -24,7 +24,7 @@ class PortfolioApp {
     this.scrollFrame = null;
     this.modeTransitionTimer = null;
     this.corePulseTimer = null;
-    this.coreKickTimer = null;
+    this.requestCoreRender = null;
   }
 
   /**
@@ -270,7 +270,14 @@ class PortfolioApp {
 
       document.documentElement.style.setProperty('--page-progress', progress.toFixed(4));
       document.documentElement.classList.toggle('is-near-page-end', progress > 0.94);
-      document.documentElement.classList.toggle('is-past-hero', window.scrollY > window.innerHeight * 0.62);
+      const isPastHero = window.scrollY > window.innerHeight * 0.62;
+      const didCrossHeroBoundary = document.documentElement.classList.contains('is-past-hero') !== isPastHero;
+
+      document.documentElement.classList.toggle('is-past-hero', isPastHero);
+
+      if (didCrossHeroBoundary) {
+        this.requestCoreRender?.();
+      }
 
       if (this.hudScroll) {
         const percentage = Math.round(progress * 100).toString().padStart(3, '0');
@@ -335,38 +342,100 @@ class PortfolioApp {
     }
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const state = {
+      targetX: window.innerWidth / 2,
+      targetY: window.innerHeight / 2,
+      currentX: window.innerWidth / 2,
+      currentY: window.innerHeight / 2,
+      panX: 0,
+      panY: 0,
+      rotateX: 0,
+      rotateY: 0,
+      velocityX: 0,
+      velocityY: 0,
+      frame: null,
+      isTouching: false,
+      lastLabelUpdate: 0,
+    };
 
-    const updateCoordinates = (point) => {
-      const x = Math.min(100, Math.max(0, (point.clientX / window.innerWidth) * 100));
-      const y = Math.min(100, Math.max(0, (point.clientY / window.innerHeight) * 100));
-      const rotateX = ((50 - y) / 50) * 4;
-      const rotateY = ((x - 50) / 50) * 6;
-      const panX = ((x - 50) / 50) * 1.1;
-      const panY = ((y - 50) / 50) * 0.85;
-      const xLabel = Math.round(x).toString().padStart(2, '0');
-      const yLabel = Math.round(y).toString().padStart(2, '0');
+    const renderFrame = (timestamp) => {
+      const followFactor = state.isTouching ? 0.56 : 0.38;
 
-      document.documentElement.style.setProperty('--hud-x', `${x.toFixed(2)}%`);
-      document.documentElement.style.setProperty('--hud-y', `${y.toFixed(2)}%`);
+      state.currentX += (state.targetX - state.currentX) * followFactor;
+      state.currentY += (state.targetY - state.currentY) * followFactor;
 
-      if (!prefersReducedMotion) {
-        document.documentElement.style.setProperty('--core-x', `${rotateX.toFixed(2)}deg`);
-        document.documentElement.style.setProperty('--core-y', `${rotateY.toFixed(2)}deg`);
-        document.documentElement.style.setProperty('--core-pan-x', `${panX.toFixed(2)}rem`);
-        document.documentElement.style.setProperty('--core-pan-y', `${panY.toFixed(2)}rem`);
+      this.codeReticle?.style.setProperty(
+        'transform',
+        `translate3d(${state.currentX.toFixed(2)}px, ${state.currentY.toFixed(2)}px, 0) translate(-50%, -50%)`,
+      );
+
+      const x = Math.min(100, Math.max(0, (state.currentX / window.innerWidth) * 100));
+      const y = Math.min(100, Math.max(0, (state.currentY / window.innerHeight) * 100));
+      const isPastHero = document.documentElement.classList.contains('is-past-hero');
+      const targetPanX = isPastHero && !prefersReducedMotion ? ((x - 50) / 50) * 1.35 : 0;
+      const targetPanY = isPastHero && !prefersReducedMotion ? ((y - 50) / 50) * 1.05 : 0;
+      const targetRotateX = isPastHero && !prefersReducedMotion ? ((50 - y) / 50) * 4 : 0;
+      const targetRotateY = isPastHero && !prefersReducedMotion ? ((x - 50) / 50) * 6 : 0;
+
+      state.panX += (targetPanX - state.panX) * 0.1 + state.velocityX;
+      state.panY += (targetPanY - state.panY) * 0.1 + state.velocityY;
+      state.rotateX += (targetRotateX - state.rotateX) * 0.12;
+      state.rotateY += (targetRotateY - state.rotateY) * 0.12;
+      state.velocityX *= 0.82;
+      state.velocityY *= 0.82;
+
+      this.systemCore.style.setProperty('--core-pan-x', `${state.panX.toFixed(3)}rem`);
+      this.systemCore.style.setProperty('--core-pan-y', `${state.panY.toFixed(3)}rem`);
+      this.systemCore.style.setProperty('--core-x', `${state.rotateX.toFixed(3)}deg`);
+      this.systemCore.style.setProperty('--core-y', `${state.rotateY.toFixed(3)}deg`);
+
+      if (timestamp - state.lastLabelUpdate > 80) {
+        const xLabel = Math.round(x).toString().padStart(2, '0');
+        const yLabel = Math.round(y).toString().padStart(2, '0');
+        const label = `X ${xLabel} / Y ${yLabel}`;
+
+        if (this.coreCoordinates) {
+          this.coreCoordinates.textContent = label;
+        }
+
+        if (this.hudCoordinates) {
+          this.hudCoordinates.textContent = label;
+        }
+
+        state.lastLabelUpdate = timestamp;
       }
 
-      if (this.coreCoordinates) {
-        this.coreCoordinates.textContent = `X ${xLabel} / Y ${yLabel}`;
+      const pointerSettled = Math.abs(state.targetX - state.currentX) < 0.2
+        && Math.abs(state.targetY - state.currentY) < 0.2;
+      const coreSettled = Math.abs(targetPanX - state.panX) < 0.005
+        && Math.abs(targetPanY - state.panY) < 0.005
+        && Math.abs(targetRotateX - state.rotateX) < 0.01
+        && Math.abs(targetRotateY - state.rotateY) < 0.01
+        && Math.abs(state.velocityX) < 0.001
+        && Math.abs(state.velocityY) < 0.001;
+
+      if (!pointerSettled || !coreSettled) {
+        state.frame = window.requestAnimationFrame(renderFrame);
+        return;
       }
 
-      if (this.hudCoordinates) {
-        this.hudCoordinates.textContent = `X ${xLabel} / Y ${yLabel}`;
+      state.frame = null;
+    };
+
+    const requestRender = () => {
+      if (state.frame === null) {
+        state.frame = window.requestAnimationFrame(renderFrame);
       }
     };
 
+    const setTarget = (point) => {
+      state.targetX = Math.min(window.innerWidth, Math.max(0, point.clientX));
+      state.targetY = Math.min(window.innerHeight, Math.max(0, point.clientY));
+      requestRender();
+    };
+
     const nudgeCore = (point) => {
-      if (prefersReducedMotion) {
+      if (prefersReducedMotion || !document.documentElement.classList.contains('is-past-hero')) {
         return;
       }
 
@@ -374,35 +443,44 @@ class PortfolioApp {
       const deltaX = bounds.left + bounds.width / 2 - point.clientX;
       const deltaY = bounds.top + bounds.height / 2 - point.clientY;
       const distance = Math.max(1, Math.hypot(deltaX, deltaY));
-      const kickX = (deltaX / distance) * 0.9;
-      const kickY = (deltaY / distance) * 0.7;
 
-      document.documentElement.style.setProperty('--core-kick-x', `${kickX.toFixed(2)}rem`);
-      document.documentElement.style.setProperty('--core-kick-y', `${kickY.toFixed(2)}rem`);
-
-      window.clearTimeout(this.coreKickTimer);
-      this.coreKickTimer = window.setTimeout(() => {
-        document.documentElement.style.setProperty('--core-kick-x', '0rem');
-        document.documentElement.style.setProperty('--core-kick-y', '0rem');
-      }, 280);
+      state.velocityX += (deltaX / distance) * 0.075;
+      state.velocityY += (deltaY / distance) * 0.055;
+      requestRender();
     };
 
-    const updateTouchCoordinates = (event) => {
+    const updateTouchTarget = (event) => {
       const touch = event.touches[0];
 
       if (touch) {
-        updateCoordinates(touch);
+        setTarget(touch);
       }
     };
 
-    window.addEventListener('pointermove', updateCoordinates, { passive: true });
+    this.requestCoreRender = requestRender;
+
+    window.addEventListener('pointermove', setTarget, { passive: true });
     window.addEventListener('pointerdown', (event) => {
-      updateCoordinates(event);
+      setTarget(event);
       nudgeCore(event);
-      this.pulseSystemCore();
+
+      if (document.documentElement.classList.contains('is-past-hero')) {
+        this.pulseSystemCore();
+      }
     }, { passive: true });
-    window.addEventListener('touchstart', updateTouchCoordinates, { passive: true });
-    window.addEventListener('touchmove', updateTouchCoordinates, { passive: true });
+    window.addEventListener('touchstart', (event) => {
+      state.isTouching = true;
+      updateTouchTarget(event);
+    }, { passive: true });
+    window.addEventListener('touchmove', updateTouchTarget, { passive: true });
+    window.addEventListener('touchend', () => {
+      state.isTouching = false;
+      requestRender();
+    }, { passive: true });
+    window.addEventListener('touchcancel', () => {
+      state.isTouching = false;
+      requestRender();
+    }, { passive: true });
   }
 
   /**
