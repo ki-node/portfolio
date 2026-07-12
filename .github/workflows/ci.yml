@@ -61,7 +61,29 @@ jobs:
           retention-days: 7
 
       - name: Run mobile and desktop browser tests
+        id: browser-tests
         run: npm run test:e2e:ci
 
+      - name: Upload browser failure diagnostics
+        if: ${{ always() && steps.browser-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-failure-diagnostics
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Enforce Lighthouse budgets
+        id: lighthouse
         run: npm run lighthouse
+
+      - name: Upload Lighthouse failure diagnostics
+        if: ${{ always() && steps.lighthouse.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lighthouse-failure-diagnostics
+          path: artifacts/lighthouse
+          if-no-files-found: warn
+          retention-days: 7
