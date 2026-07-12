@@ -1,17 +1,34 @@
 # Anonymisierte Portfolio-Vorschau
 
-Eine responsive, statische Portfolio-Website ohne Build-Prozess.
+Mobile-first Portfolio mit Vite, Vanilla TypeScript und gebündeltem CSS.
 
-## Starten
+## Entwicklung
 
-`index.html` direkt im Browser öffnen oder im Projektordner einen lokalen
-Webserver starten:
+Voraussetzung: Node.js 22 oder neuer.
 
 ```bash
-python3 -m http.server 8000
+npm ci
+npm run dev
 ```
 
-Danach `http://localhost:8000` öffnen.
+Vite zeigt die lokale URL im Terminal an und aktualisiert Änderungen per HMR.
+
+## Qualitätssicherung
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
+```
+
+Der Produktionsbuild wird nach `dist/` geschrieben. Vite versieht JavaScript
+und CSS automatisch mit Content-Hashes.
+
+## Deployment
+
+Der Branch `develop` dient der Entwicklung. Ein Squash-Merge nach `main`
+startet `.github/workflows/deploy.yml`, prüft TypeScript, baut die Seite und
+veröffentlicht das `dist/`-Artefakt auf GitHub Pages.
 
 ## Vor Veröffentlichung anpassen
 
