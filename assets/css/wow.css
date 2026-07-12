@@ -430,6 +430,17 @@ body.is-menu-open {
     box-shadow: 0 0 1rem var(--xray);
 }
 
+.is-code-mode .mode-switch {
+    border-color: var(--xray-line);
+    background: rgba(0, 15, 12, 0.82);
+}
+
+.is-code-mode .mode-switch__button.is-active {
+    color: #04120d;
+    background: var(--xray);
+    box-shadow: 0 0 1.4rem rgba(143, 255, 210, 0.28);
+}
+
 .is-code-mode .hero__title {
     max-width: 11ch;
     color: #e8fff6;
@@ -756,7 +767,7 @@ body.is-menu-open {
     }
 
     .is-code-mode .hero {
-        min-height: 56rem;
+        min-height: 60rem;
     }
 
     .is-code-mode .hero__shape {
@@ -766,15 +777,13 @@ body.is-menu-open {
     }
 
     .is-code-mode .hero-code {
+        position: relative;
         top: auto;
-        right: var(--page-padding);
-        bottom: 8rem;
-        left: var(--page-padding);
-        width: auto;
-    }
-
-    .is-code-mode .hero__bottom {
-        transform: translateY(-12rem);
+        right: auto;
+        bottom: auto;
+        left: auto;
+        width: 100%;
+        margin-top: 1.5rem;
     }
 
     .is-code-mode .navigation {
