@@ -596,27 +596,30 @@ body.is-menu-open {
         position: relative;
         z-index: 3;
         display: flex;
-        width: auto;
-        min-width: 5.25rem;
+        width: 3rem;
+        min-width: 3rem;
         height: 3rem;
         align-items: center;
         justify-content: center;
-        gap: 0.65rem;
-        padding: 0 0.85rem;
-        border-radius: 999px;
+        padding: 0;
+        border-radius: 50%;
         color: #f6effc;
     }
 
     .menu-button__text {
-        display: inline;
-        font: 500 0.64rem var(--mono);
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
+        display: none;
+    }
+
+    .menu-button > span:not(.sr-only) {
+        width: auto;
+        height: auto;
+        background: transparent;
+        transform: none;
     }
 
     .menu-button__glyph {
         display: grid;
-        width: 1rem;
+        width: 1.1rem !important;
         gap: 0.28rem;
     }
 
