@@ -3,10 +3,10 @@
 ## Branches
 
 - `main` ist der veröffentlichte Produktionsstand.
-- `develop` sammelt geprüfte Änderungen vor dem Release.
-- Größere Änderungen entstehen optional in kurzen Branches wie `feat/navigation` und werden zunächst nach `develop` gemergt.
+- `dev` sammelt geprüfte Änderungen vor dem Release.
+- Größere Änderungen entstehen optional in kurzen Branches wie `feat/navigation` und werden zunächst nach `dev` gemergt.
 
-Ein Pull Request von `develop` nach `main` wird als Squash-Merge übernommen und löst genau ein Pages-Deployment aus.
+Ein Pull Request von `dev` nach `main` wird als Squash-Merge übernommen und löst genau ein Pages-Deployment aus.
 
 ## Lokale Qualitätssicherung
 
