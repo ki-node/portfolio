@@ -354,15 +354,12 @@ class PortfolioApp {
       velocityX: 0,
       velocityY: 0,
       frame: null,
-      isTouching: false,
       lastLabelUpdate: 0,
     };
 
     const renderFrame = (timestamp) => {
-      const followFactor = state.isTouching ? 0.68 : 0.58;
-
-      state.currentX += (state.targetX - state.currentX) * followFactor;
-      state.currentY += (state.targetY - state.currentY) * followFactor;
+      state.currentX = state.targetX;
+      state.currentY = state.targetY;
 
       this.codeReticle?.style.setProperty(
         'transform',
@@ -469,18 +466,9 @@ class PortfolioApp {
       }
     }, { passive: true });
     window.addEventListener('touchstart', (event) => {
-      state.isTouching = true;
       updateTouchTarget(event);
     }, { passive: true });
     window.addEventListener('touchmove', updateTouchTarget, { passive: true });
-    window.addEventListener('touchend', () => {
-      state.isTouching = false;
-      requestRender();
-    }, { passive: true });
-    window.addEventListener('touchcancel', () => {
-      state.isTouching = false;
-      requestRender();
-    }, { passive: true });
   }
 
   /**
