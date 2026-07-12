@@ -2,6 +2,8 @@
 
 Mobile-first Portfolio mit Vite, Vanilla TypeScript, lokal gebündelten Fonts und automatisierter WCAG-, Browser- und Performance-Qualitätssicherung.
 
+Die dargestellten Projektsituationen sind bewusst anonymisiert und verzichten auf Kundennamen, personenbezogene Angaben und unbelegte Kennzahlen.
+
 ## Voraussetzungen
 
 - Node.js 22 (`.nvmrc`)
