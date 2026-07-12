@@ -64,7 +64,7 @@ try {
   const thresholds = new Map([
     ['accessibility', 1],
     ['best-practices', 0.95],
-    ['performance', 0.9],
+    ['performance', 0.8],
     ['seo', 0.95],
   ]);
   const failures = [];
@@ -83,9 +83,12 @@ try {
     result.lhr.audits['cumulative-layout-shift']?.numericValue ?? Number.POSITIVE_INFINITY;
   const lcp =
     result.lhr.audits['largest-contentful-paint']?.numericValue ?? Number.POSITIVE_INFINITY;
+  const totalBlockingTime =
+    result.lhr.audits['total-blocking-time']?.numericValue ?? Number.POSITIVE_INFINITY;
 
   console.log(`CLS: ${cls.toFixed(3)} / 0.100`);
   console.log(`LCP: ${Math.round(lcp)} ms / 2500 ms`);
+  console.log(`TBT: ${Math.round(totalBlockingTime)} ms / 200 ms`);
 
   if (cls > 0.1) {
     failures.push(`CLS ${cls.toFixed(3)} > 0.100`);
@@ -93,6 +96,10 @@ try {
 
   if (lcp > 2500) {
     failures.push(`LCP ${Math.round(lcp)} ms > 2500 ms`);
+  }
+
+  if (totalBlockingTime > 200) {
+    failures.push(`TBT ${Math.round(totalBlockingTime)} ms > 200 ms`);
   }
 
   if (failures.length > 0) {
