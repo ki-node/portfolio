@@ -411,6 +411,7 @@ body {
     position: relative;
     isolation: isolate;
     overflow: hidden;
+    color: var(--ink);
     border-block: 1px solid rgba(224, 204, 255, 0.1);
     background:
         radial-gradient(circle at 10% 60%, rgba(111, 43, 175, 0.19), transparent 34rem),
