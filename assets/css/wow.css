@@ -82,6 +82,7 @@ main,
         rotateX(var(--core-x))
         rotateY(var(--core-y));
     transform-style: preserve-3d;
+    animation: none;
     transition:
         opacity 420ms ease,
         filter 420ms ease,

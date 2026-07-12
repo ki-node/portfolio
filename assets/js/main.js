@@ -359,7 +359,7 @@ class PortfolioApp {
     };
 
     const renderFrame = (timestamp) => {
-      const followFactor = state.isTouching ? 0.56 : 0.38;
+      const followFactor = state.isTouching ? 0.68 : 0.58;
 
       state.currentX += (state.targetX - state.currentX) * followFactor;
       state.currentY += (state.targetY - state.currentY) * followFactor;
