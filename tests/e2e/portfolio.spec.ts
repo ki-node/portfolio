@@ -149,6 +149,12 @@ test('keeps the background fixed, the menu scrollable and restores deep scroll',
     });
     expect((await page.evaluate(readScrollLockState)).bodyInset).toBe(lockedState.bodyInset);
 
+    if (iteration === 0) {
+      await page.setViewportSize({ width: 568, height: 390 });
+      expect((await page.evaluate(readScrollLockState)).bodyInset).toBe(lockedState.bodyInset);
+      await page.setViewportSize({ width: 390, height: 420 });
+    }
+
     const menuScroll = await navigation.evaluate((element) => {
       element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
       return {

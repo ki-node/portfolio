@@ -185,6 +185,18 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
   await frame.getByRole('button', { name: 'Code' }).click();
   await dispatchTouch(frame, 'touchstart', 104, 208);
   await expect.poll(() => reticlePosition(frame)).toEqual([104, 208]);
+
+  await frame.locator('html').evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await dispatchTouch(frame, 'touchstart', 140, 240);
+  expect(await reticlePosition(frame)).toEqual([104, 208]);
+
+  await page.locator('iframe').evaluate((element, source) => {
+    (element as HTMLIFrameElement).src = source;
+  }, `${embeddedUrl}?reinitialize=1`);
+  await expect(frame.getByRole('heading', { level: 1 })).toBeVisible();
+  await frame.getByRole('button', { name: 'Code' }).click();
+  await dispatchTouch(frame, 'touchstart', 124, 224);
+  await expect.poll(() => reticlePosition(frame)).toEqual([124, 224]);
 });
 
 test('locks embedded background scrolling while keeping the mobile menu scrollable', async ({
