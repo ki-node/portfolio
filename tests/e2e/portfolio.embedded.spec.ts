@@ -193,6 +193,14 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
   await page.locator('iframe').evaluate((element, source) => {
     (element as HTMLIFrameElement).src = source;
   }, `${embeddedUrl}?reinitialize=1`);
+  await expect
+    .poll(() =>
+      page
+        .frames()
+        .find((candidate) => candidate.parentFrame())
+        ?.url(),
+    )
+    .toContain('reinitialize=1');
   await expect(frame.getByRole('heading', { level: 1 })).toBeVisible();
   await frame.getByRole('button', { name: 'Code' }).click();
   await dispatchTouch(frame, 'touchstart', 124, 224);
