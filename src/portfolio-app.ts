@@ -18,7 +18,7 @@ export const createPortfolioControllers = (
     new CurrentYearController(),
     new NavigationController(),
     systemCore,
-    new ViewModeController(systemCore.pulse),
+    new ViewModeController(systemCore.pulse, systemCore.resetInputTracking),
     new PageProgressController(systemCore.requestRender),
     new PointerEffectsController(),
     new ViewportObserversController(),

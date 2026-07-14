@@ -21,6 +21,18 @@ interface MotionState {
   lastLabelUpdate: number;
 }
 
+type InputSource = 'pointer' | 'touch';
+
+interface TouchPointerSequence {
+  readonly pointerId: number;
+  lastEventAt: number;
+  lastMoveAt: number | undefined;
+  point: ViewportPoint;
+}
+
+const POINTER_FRESHNESS_MS = 160;
+const DUPLICATE_DISTANCE_PX = 4;
+
 /** Owns touch/pointer tracking, the X-Ray reticle and the floating system core. */
 export class SystemCoreController implements Controller {
   private readonly core = document.querySelector<HTMLElement>('[data-system-core]');
@@ -31,7 +43,10 @@ export class SystemCoreController implements Controller {
   private pulseTimer: number | undefined;
   private state: MotionState | undefined;
   private prefersReducedMotion = false;
-  private readonly activeTouchPointerIds = new Set<number>();
+  private touchPointerSequence: TouchPointerSequence | undefined;
+  private touchOwnsSequence = false;
+
+  constructor(private readonly reportInputSource?: (source: InputSource) => void) {}
 
   init() {
     if (!this.core) {
@@ -57,12 +72,14 @@ export class SystemCoreController implements Controller {
     // WKWebView can expose PointerEvent while still emitting touch-only sequences.
     window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
     window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
+    window.addEventListener('touchend', this.handleTouchEnd, { passive: true, signal });
+    window.addEventListener('touchcancel', this.handleTouchEnd, { passive: true, signal });
   }
 
   destroy() {
     this.abortController?.abort();
     this.abortController = undefined;
-    this.activeTouchPointerIds.clear();
+    this.resetInputTracking();
     window.clearTimeout(this.pulseTimer);
     this.core?.classList.remove('is-energized');
 
@@ -86,6 +103,11 @@ export class SystemCoreController implements Controller {
     this.core.classList.add('is-energized');
     window.clearTimeout(this.pulseTimer);
     this.pulseTimer = window.setTimeout(() => this.core?.classList.remove('is-energized'), 620);
+  };
+
+  resetInputTracking = () => {
+    this.touchPointerSequence = undefined;
+    this.touchOwnsSequence = false;
   };
 
   private createInitialState(): MotionState {
@@ -155,7 +177,7 @@ export class SystemCoreController implements Controller {
     }
   };
 
-  private readonly setTarget = (point: ViewportPoint) => {
+  private readonly setTarget = (point: ViewportPoint, source: InputSource) => {
     if (!this.state) {
       return;
     }
@@ -167,15 +189,25 @@ export class SystemCoreController implements Controller {
 
     this.state.targetX = normalizedPoint.clientX;
     this.state.targetY = normalizedPoint.clientY;
+    this.reportInputSource?.(source);
     this.requestRender();
   };
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === 'touch') {
-      this.activeTouchPointerIds.add(event.pointerId);
+      if (this.touchOwnsSequence) {
+        return;
+      }
+
+      this.touchPointerSequence = {
+        pointerId: event.pointerId,
+        lastEventAt: event.timeStamp,
+        lastMoveAt: undefined,
+        point: event,
+      };
     }
 
-    this.setTarget(event);
+    this.setTarget(event, 'pointer');
     this.nudgeCore(event);
 
     if (document.documentElement.classList.contains('is-past-hero')) {
@@ -184,25 +216,64 @@ export class SystemCoreController implements Controller {
   };
 
   private readonly handlePointerMove = (event: PointerEvent) => {
-    this.setTarget(event);
+    if (event.pointerType === 'touch') {
+      if (this.touchOwnsSequence) {
+        return;
+      }
+
+      if (this.touchPointerSequence?.pointerId === event.pointerId) {
+        this.touchPointerSequence.lastEventAt = event.timeStamp;
+        this.touchPointerSequence.lastMoveAt = event.timeStamp;
+        this.touchPointerSequence.point = event;
+      } else {
+        this.touchPointerSequence = {
+          pointerId: event.pointerId,
+          lastEventAt: event.timeStamp,
+          lastMoveAt: event.timeStamp,
+          point: event,
+        };
+      }
+    }
+
+    this.setTarget(event, 'pointer');
   };
 
   private readonly handlePointerEnd = (event: PointerEvent) => {
-    if (event.pointerType === 'touch') {
-      this.activeTouchPointerIds.delete(event.pointerId);
+    if (event.pointerType === 'touch' && this.touchPointerSequence?.pointerId === event.pointerId) {
+      this.touchPointerSequence = undefined;
     }
   };
 
   private readonly updateTouchTarget = (event: TouchEvent) => {
-    if (this.activeTouchPointerIds.size > 0) {
+    const touch = event.touches[0];
+
+    if (!touch) {
       return;
     }
 
-    const touch = event.touches[0];
+    const pointerSequence = this.touchPointerSequence;
+    const relevantPointerTime =
+      event.type === 'touchmove' ? pointerSequence?.lastMoveAt : pointerSequence?.lastEventAt;
+    const pointerIsFresh =
+      relevantPointerTime !== undefined &&
+      Math.abs(event.timeStamp - relevantPointerTime) <= POINTER_FRESHNESS_MS;
+    const matchesPointer =
+      pointerSequence !== undefined &&
+      Math.hypot(
+        pointerSequence.point.clientX - touch.clientX,
+        pointerSequence.point.clientY - touch.clientY,
+      ) <= DUPLICATE_DISTANCE_PX;
 
-    if (touch) {
-      this.setTarget(touch);
+    if (!this.touchOwnsSequence && pointerIsFresh && matchesPointer) {
+      return;
     }
+
+    this.touchOwnsSequence = true;
+    this.setTarget(touch, 'touch');
+  };
+
+  private readonly handleTouchEnd = () => {
+    this.resetInputTracking();
   };
 
   private nudgeCore(point: ViewportPoint) {

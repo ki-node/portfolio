@@ -10,6 +10,35 @@ const reticlePosition = async (frame: ReturnType<Page['frameLocator']>) =>
     return match ? [Number(match[1]), Number(match[2])] : [];
   });
 
+const dispatchTouch = async (
+  frame: ReturnType<Page['frameLocator']>,
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  clientX: number,
+  clientY: number,
+) => {
+  await frame.locator('body').evaluate(
+    (body, input) => {
+      const touch = new Touch({
+        identifier: 17,
+        target: body,
+        clientX: input.clientX,
+        clientY: input.clientY,
+      });
+      const activeTouches = input.type === 'touchend' ? [] : [touch];
+
+      window.dispatchEvent(
+        new TouchEvent(input.type, {
+          bubbles: true,
+          cancelable: true,
+          changedTouches: [touch],
+          touches: activeTouches,
+        }),
+      );
+    },
+    { type, clientX, clientY },
+  );
+};
+
 const openInHubFrame = async (page: Page) => {
   await page.setContent(`
     <!doctype html>
@@ -114,8 +143,97 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
   });
   await expect.poll(() => reticlePosition(frame)).toEqual([205, 315]);
 
+  await frame.locator('body').dispatchEvent('pointerup', {
+    clientX: 205,
+    clientY: 315,
+    pointerId: 7,
+    pointerType: 'touch',
+  });
+
+  // WKWebView may announce PointerEvent support but stop after pointerdown.
+  await frame.locator('body').dispatchEvent('pointerdown', {
+    clientX: 110,
+    clientY: 210,
+    pointerId: 19,
+    pointerType: 'touch',
+  });
+  await dispatchTouch(frame, 'touchstart', 110, 210);
+  await dispatchTouch(frame, 'touchmove', 225, 330);
+  await expect.poll(() => reticlePosition(frame)).toEqual([225, 330]);
+
+  // Later pointer events from the abandoned sequence must not overwrite touch.
+  await frame.locator('body').dispatchEvent('pointermove', {
+    clientX: 280,
+    clientY: 380,
+    pointerId: 19,
+    pointerType: 'touch',
+  });
+  await expect.poll(() => reticlePosition(frame)).toEqual([225, 330]);
+  await dispatchTouch(frame, 'touchend', 225, 330);
+
+  // Touch-only input remains valid even though PointerEvent exists.
+  await dispatchTouch(frame, 'touchstart', 86, 176);
+  await dispatchTouch(frame, 'touchmove', 166, 276);
+  await expect.poll(() => reticlePosition(frame)).toEqual([166, 276]);
+  await dispatchTouch(frame, 'touchend', 166, 276);
+
   await frame.locator('#arbeit').evaluate((element) => element.scrollIntoView());
-  expect(await reticlePosition(frame)).toEqual([205, 315]);
+  await dispatchTouch(frame, 'touchstart', 64, 128);
+  await expect.poll(() => reticlePosition(frame)).toEqual([64, 128]);
+
+  await frame.getByRole('button', { name: 'Design' }).click();
+  await frame.getByRole('button', { name: 'Code' }).click();
+  await dispatchTouch(frame, 'touchstart', 104, 208);
+  await expect.poll(() => reticlePosition(frame)).toEqual([104, 208]);
+});
+
+test('locks embedded background scrolling while keeping the mobile menu scrollable', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'The command deck is a mobile navigation pattern.');
+  await page.setViewportSize({ width: 390, height: 524 });
+  const frame = await openInHubFrame(page);
+  const savedScrollY = await frame.locator('html').evaluate(() => {
+    window.scrollTo(0, Math.min(1_200, document.documentElement.scrollHeight - window.innerHeight));
+    return window.scrollY;
+  });
+
+  await frame.locator('[data-menu-button]').click();
+  const lockState = await frame.locator('html').evaluate(() => ({
+    bodyInset: document.body.style.inset,
+    bodyPosition: document.body.style.position,
+    htmlOverflow: document.documentElement.style.overflow,
+  }));
+  expect(lockState).toMatchObject({ bodyPosition: 'fixed', htmlOverflow: 'hidden' });
+  expect(lockState.bodyInset).toContain(`${-savedScrollY}px`);
+
+  await dispatchTouch(frame, 'touchstart', 190, 420);
+  await dispatchTouch(frame, 'touchmove', 190, 180);
+  expect(await frame.locator('body').evaluate((body) => body.style.inset)).toBe(
+    lockState.bodyInset,
+  );
+
+  const menuScroll = await frame
+    .getByRole('navigation', { name: 'Hauptnavigation' })
+    .evaluate((element) => {
+      element.scrollTop = Math.min(100, element.scrollHeight - element.clientHeight);
+      return {
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+      };
+    });
+  expect(menuScroll.scrollHeight).toBeGreaterThan(menuScroll.clientHeight);
+  expect(menuScroll.scrollTop).toBeGreaterThan(0);
+
+  await frame.getByRole('button', { name: 'Menü schließen' }).click();
+  await expect.poll(() => frame.locator('html').evaluate(() => window.scrollY)).toBe(savedScrollY);
+
+  await frame.locator('[data-menu-button]').click();
+  await frame.locator('html').evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await expect(frame.locator('body')).not.toHaveClass(/is-menu-open/u);
+  await expect.poll(() => frame.locator('body').evaluate((body) => body.style.position)).toBe('');
 });
 
 test('forwards allowed links with the versioned bridge and leaves hashes local', async ({

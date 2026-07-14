@@ -1,4 +1,5 @@
 import type { Controller } from './controller';
+import { DocumentScrollLock } from './document-scroll-lock';
 
 /** Owns the mobile command deck, sticky header and active-section state. */
 export class NavigationController implements Controller {
@@ -10,6 +11,7 @@ export class NavigationController implements Controller {
     document.querySelectorAll<HTMLAnchorElement>('[data-nav-section]');
   private readonly pageContent = document.querySelectorAll<HTMLElement>('main, footer');
   private readonly abortController = new AbortController();
+  private readonly scrollLock = new DocumentScrollLock();
   private sectionObserver: IntersectionObserver | undefined;
   private focusFrame: number | undefined;
   private focusTimer: number | undefined;
@@ -55,9 +57,19 @@ export class NavigationController implements Controller {
       () => {
         if (window.matchMedia('(min-width: 50.0625rem)').matches) {
           this.closeMenu(false);
+        } else {
+          this.scrollLock.refresh();
         }
       },
       { passive: true, signal },
+    );
+    window.visualViewport?.addEventListener(
+      'resize',
+      this.scrollLock.refresh.bind(this.scrollLock),
+      {
+        passive: true,
+        signal,
+      },
     );
   }
 
@@ -87,8 +99,10 @@ export class NavigationController implements Controller {
   }
 
   private openMenu() {
+    this.scrollLock.lock();
     this.menuButton?.setAttribute('aria-expanded', 'true');
     this.navigation?.classList.add('is-open');
+    document.documentElement.classList.add('is-menu-open');
     document.body.classList.add('is-menu-open');
     this.menuLabel?.replaceChildren('Menü schließen');
     this.pageContent.forEach((element) => (element.inert = true));
@@ -103,9 +117,11 @@ export class NavigationController implements Controller {
 
     this.menuButton?.setAttribute('aria-expanded', 'false');
     this.navigation?.classList.remove('is-open');
+    document.documentElement.classList.remove('is-menu-open');
     document.body.classList.remove('is-menu-open');
     this.menuLabel?.replaceChildren('Menü öffnen');
     this.pageContent.forEach((element) => (element.inert = false));
+    this.scrollLock.unlock();
 
     if (wasOpen && restoreFocus) {
       this.menuButton.focus();

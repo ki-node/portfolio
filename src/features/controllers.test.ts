@@ -104,8 +104,15 @@ const createTouchPointerEvent = (
   return event;
 };
 
+const createTouchEvent = (type: string, clientX: number, clientY: number) =>
+  new TouchEvent(type, {
+    touches: type === 'touchend' || type === 'touchcancel' ? [] : [{ clientX, clientY } as Touch],
+  });
+
 beforeEach(() => {
   document.body.replaceChildren();
+  document.body.className = '';
+  document.body.removeAttribute('style');
   document.documentElement.className = '';
   document.documentElement.removeAttribute('data-view');
   document.documentElement.removeAttribute('style');
@@ -144,6 +151,8 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn((id: number) => frameCallbacks.delete(id)),
   });
+  Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 });
+  Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
 });
 
 afterEach(() => {
@@ -166,7 +175,7 @@ describe('CurrentYearController', () => {
 });
 
 describe('NavigationController', () => {
-  it('closes the menu and removes listeners, observers and frames on destroy', () => {
+  it('locks both scroll roots and restores the exact position on destroy', () => {
     document.body.innerHTML = `
       <header data-header>
         <button data-menu-button aria-expanded="false"><span data-menu-label>Menü öffnen</span></button>
@@ -181,6 +190,9 @@ describe('NavigationController', () => {
     const controller = new NavigationController();
     const button = document.querySelector<HTMLButtonElement>('[data-menu-button]');
     const main = document.querySelector<HTMLElement>('main');
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    Object.defineProperty(window, 'scrollX', { configurable: true, value: 12 });
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 640 });
 
     controller.init();
     button?.click();
@@ -188,12 +200,20 @@ describe('NavigationController', () => {
 
     expect(button?.getAttribute('aria-expanded')).toBe('true');
     expect(main?.inert).toBe(true);
+    expect(document.documentElement.classList.contains('is-menu-open')).toBe(true);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.inset).toBe('-640px 0 auto -12px');
     expect(IntersectionObserverMock.instances).toHaveLength(1);
 
     controller.destroy();
 
     expect(button?.getAttribute('aria-expanded')).toBe('false');
     expect(main?.inert).toBe(false);
+    expect(document.documentElement.classList.contains('is-menu-open')).toBe(false);
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(document.body.style.position).toBe('');
+    expect(scrollTo).toHaveBeenCalledWith({ left: 12, top: 640, behavior: 'auto' });
     expect(IntersectionObserverMock.instances[0]?.disconnected).toBe(true);
 
     button?.click();
@@ -209,7 +229,8 @@ describe('ViewModeController', () => {
       <p data-mode-status></p>
     `;
     const pulseCore = vi.fn();
-    const controller = new ViewModeController(pulseCore);
+    const resetInputTracking = vi.fn();
+    const controller = new ViewModeController(pulseCore, resetInputTracking);
     const codeButton = document.querySelector<HTMLButtonElement>('[data-mode="code"]');
     const designButton = document.querySelector<HTMLButtonElement>('[data-mode="design"]');
 
@@ -220,6 +241,10 @@ describe('ViewModeController', () => {
     expect(document.documentElement.classList.contains('is-mode-transitioning')).toBe(true);
     expect(codeButton?.getAttribute('aria-pressed')).toBe('true');
     expect(pulseCore).toHaveBeenCalledOnce();
+
+    designButton?.click();
+    expect(resetInputTracking).toHaveBeenCalledOnce();
+    codeButton?.click();
 
     controller.destroy();
     vi.runAllTimers();
@@ -322,7 +347,7 @@ describe('ViewportObserversController', () => {
 });
 
 describe('SystemCoreController', () => {
-  it('tracks touch pointers in local viewport coordinates without duplicate touch handlers', () => {
+  const renderSystemCore = () => {
     document.body.innerHTML = `
       <div data-system-core><span data-core-coordinates></span></div>
       <div data-code-reticle></div>
@@ -330,43 +355,107 @@ describe('SystemCoreController', () => {
     `;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 700 });
+  };
+
+  it('prefers a current complete pointer sequence and deduplicates matching touch events', () => {
+    renderSystemCore();
     const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
-    const controller = new SystemCoreController();
+    const inputSource = vi.fn();
+    const controller = new SystemCoreController(inputSource);
 
     controller.init();
     window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
-    window.dispatchEvent(
-      new TouchEvent('touchstart', {
-        touches: [{ clientX: 210, clientY: 310 } as Touch],
-      }),
-    );
+    window.dispatchEvent(createTouchEvent('touchstart', 72, 144));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(72.00px, 144.00px');
 
     window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }));
+    window.dispatchEvent(createTouchEvent('touchmove', 180, 260));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
+    expect(inputSource).toHaveBeenLastCalledWith('pointer');
 
     window.dispatchEvent(createTouchPointerEvent('pointerup'));
-    window.dispatchEvent(
-      new TouchEvent('touchmove', {
-        touches: [{ clientX: 205, clientY: 315 } as Touch],
-      }),
-    );
+    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    controller.destroy();
+  });
+
+  it('hands an incomplete pointer sequence over to touch movement automatically', () => {
+    renderSystemCore();
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const inputSource = vi.fn();
+    const controller = new SystemCoreController(inputSource);
+
+    controller.init();
+    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
+    window.dispatchEvent(createTouchEvent('touchstart', 72, 144));
+    window.dispatchEvent(createTouchEvent('touchmove', 205, 315));
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
+    expect(inputSource).toHaveBeenLastCalledWith('touch');
+
+    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 250, clientY: 350 }));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
 
+    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 120, clientY: 220 }));
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(120.00px, 220.00px');
+    expect(inputSource).toHaveBeenLastCalledWith('pointer');
+    controller.destroy();
+  });
+
+  it('accepts touch-only input even when the PointerEvent API is present', () => {
+    renderSystemCore();
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const inputSource = vi.fn();
+    const controller = new SystemCoreController(inputSource);
+
+    controller.init();
+    window.dispatchEvent(createTouchEvent('touchstart', 90, 180));
+    window.dispatchEvent(createTouchEvent('touchmove', 195, 305));
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toContain('translate3d(195.00px, 305.00px');
+    expect(inputSource).toHaveBeenLastCalledWith('touch');
+
     window.dispatchEvent(new Event('scroll'));
-    expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
+    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    window.dispatchEvent(createTouchEvent('touchstart', 44, 88));
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(44.00px, 88.00px');
+    controller.destroy();
+  });
+
+  it('resets arbitration on mode changes and removes every listener on destroy', () => {
+    renderSystemCore();
+    const inputSource = vi.fn();
+    const controller = new SystemCoreController(inputSource);
+
+    controller.init();
+    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
+    window.dispatchEvent(createTouchEvent('touchmove', 205, 315));
+    controller.resetInputTracking();
+    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }));
+    flushAnimationFrames();
+    expect(inputSource).toHaveBeenLastCalledWith('pointer');
+
+    controller.destroy();
+    inputSource.mockClear();
+    window.dispatchEvent(createTouchEvent('touchstart', 100, 100));
+    expect(inputSource).not.toHaveBeenCalled();
+
+    controller.init();
+    window.dispatchEvent(createTouchEvent('touchstart', 110, 210));
+    flushAnimationFrames();
+    expect(inputSource).toHaveBeenLastCalledWith('touch');
     controller.destroy();
   });
 
   it('cancels frames, timers and input listeners while clearing transient state', () => {
-    document.body.innerHTML = `
-      <div data-system-core><span data-core-coordinates></span></div>
-      <div data-code-reticle></div>
-      <output data-hud-coordinates></output>
-    `;
+    renderSystemCore();
     const core = document.querySelector<HTMLElement>('[data-system-core]');
     const controller = new SystemCoreController();
 

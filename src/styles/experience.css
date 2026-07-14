@@ -16,8 +16,10 @@ body {
     transition: background-color 420ms ease, color 420ms ease;
 }
 
+html.is-menu-open,
 body.is-menu-open {
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
 .ambient {
@@ -749,7 +751,8 @@ main,
         display: flex;
         min-width: 0;
         width: 100%;
-        min-height: 100dvh;
+        height: 100dvh;
+        min-height: 0;
         flex-direction: column;
         gap: 0;
         padding:
@@ -769,11 +772,14 @@ main,
         clip-path: circle(0 at calc(100% - 3rem) 3rem);
         opacity: 1;
         overflow-y: auto;
+        overscroll-behavior: contain;
         pointer-events: none;
+        touch-action: pan-y;
         transform: none;
         transition: clip-path 560ms cubic-bezier(0.7, 0, 0.2, 1), visibility 0s 560ms;
         visibility: hidden;
         backdrop-filter: blur(24px);
+        -webkit-overflow-scrolling: touch;
     }
 
     .navigation.is-open {
