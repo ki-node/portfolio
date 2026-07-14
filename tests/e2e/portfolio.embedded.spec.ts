@@ -18,22 +18,21 @@ const dispatchTouch = async (
 ) => {
   await frame.locator('body').evaluate(
     (body, input) => {
-      const touch = new Touch({
+      const touch = {
         identifier: 17,
         target: body,
         clientX: input.clientX,
         clientY: input.clientY,
-      });
+      };
       const activeTouches = input.type === 'touchend' ? [] : [touch];
+      const event = new Event(input.type, { bubbles: true, cancelable: true });
 
-      window.dispatchEvent(
-        new TouchEvent(input.type, {
-          bubbles: true,
-          cancelable: true,
-          changedTouches: [touch],
-          touches: activeTouches,
-        }),
-      );
+      Object.defineProperties(event, {
+        changedTouches: { value: [touch] },
+        targetTouches: { value: activeTouches },
+        touches: { value: activeTouches },
+      });
+      window.dispatchEvent(event);
     },
     { type, clientX, clientY },
   );

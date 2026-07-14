@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 
 const readScrollLockState = () => ({
   bodyInset: document.body.style.inset,
@@ -7,6 +7,34 @@ const readScrollLockState = () => ({
   htmlOverflow: document.documentElement.style.overflow,
   scrollY: window.scrollY,
 });
+
+const dispatchTouch = async (
+  target: Locator,
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  clientX: number,
+  clientY: number,
+) => {
+  await target.evaluate(
+    (element, input) => {
+      const touch = {
+        identifier: 17,
+        target: element,
+        clientX: input.clientX,
+        clientY: input.clientY,
+      };
+      const activeTouches = input.type === 'touchend' ? [] : [touch];
+      const event = new Event(input.type, { bubbles: true, cancelable: true });
+
+      Object.defineProperties(event, {
+        changedTouches: { value: [touch] },
+        targetTouches: { value: activeTouches },
+        touches: { value: activeTouches },
+      });
+      element.dispatchEvent(event);
+    },
+    { type, clientX, clientY },
+  );
+};
 
 test('renders without horizontal overflow', async ({ page }) => {
   await page.goto('./');
@@ -141,12 +169,8 @@ test('keeps the background fixed, the menu scrollable and restores deep scroll',
     expect(lockedState.bodyPosition).toBe('fixed');
     expect(lockedState.bodyInset).toContain(`${-savedScrollY}px`);
 
-    await page.locator('main').dispatchEvent('touchstart', {
-      touches: [{ clientX: 190, clientY: 420 }],
-    });
-    await page.locator('main').dispatchEvent('touchmove', {
-      touches: [{ clientX: 190, clientY: 180 }],
-    });
+    await dispatchTouch(page.locator('main'), 'touchstart', 190, 420);
+    await dispatchTouch(page.locator('main'), 'touchmove', 190, 180);
     expect((await page.evaluate(readScrollLockState)).bodyInset).toBe(lockedState.bodyInset);
 
     if (iteration === 0) {
