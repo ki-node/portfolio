@@ -41,6 +41,9 @@ const collectTextAssets = async (directory) => {
 const pagesHtml = await readOutput(pagesDirectory);
 const embeddedHtml = await readOutput(embeddedDirectory);
 
+assert.match(pagesHtml, /<html lang="de" data-app-context="web">/u);
+assert.match(embeddedHtml, /<html lang="de" data-app-context="embedded">/u);
+
 assert.match(pagesHtml, /href="\/portfolio\/icon\.svg"/u);
 assert.match(pagesHtml, /href="\/portfolio\/apple-touch-icon\.png"/u);
 assert.match(pagesHtml, /href="https:\/\/ki-node\.github\.io\/portfolio\/"/u);

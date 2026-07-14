@@ -115,6 +115,10 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn(createMediaQueryList),
   });
+  Object.defineProperty(window, 'PointerEvent', {
+    configurable: true,
+    value: MouseEvent,
+  });
   Object.defineProperty(window, 'requestAnimationFrame', {
     configurable: true,
     value: vi.fn((callback: FrameRequestCallback) => {
@@ -306,6 +310,35 @@ describe('ViewportObserversController', () => {
 });
 
 describe('SystemCoreController', () => {
+  it('tracks touch pointers in local viewport coordinates without duplicate touch handlers', () => {
+    document.body.innerHTML = `
+      <div data-system-core><span data-core-coordinates></span></div>
+      <div data-code-reticle></div>
+      <output data-hud-coordinates></output>
+    `;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 700 });
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const controller = new SystemCoreController();
+
+    controller.init();
+    window.dispatchEvent(
+      new PointerEvent('pointerdown', { clientX: 72, clientY: 144, pointerType: 'touch' }),
+    );
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(72.00px, 144.00px');
+
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: 180, clientY: 260, pointerType: 'touch' }),
+    );
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
+
+    window.dispatchEvent(new Event('scroll'));
+    expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
+    controller.destroy();
+  });
+
   it('cancels frames, timers and input listeners while clearing transient state', () => {
     document.body.innerHTML = `
       <div data-system-core><span data-core-coordinates></span></div>

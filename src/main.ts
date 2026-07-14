@@ -6,6 +6,10 @@ import './styles/experience.css';
 
 import { exposeAppContext } from './app-context';
 import { mountPortfolio } from './app-lifecycle';
+import { createPortfolioControllers, PortfolioApp } from './portfolio-app';
 
-exposeAppContext(import.meta.env.MODE);
-mountPortfolio();
+const context = exposeAppContext(import.meta.env.MODE);
+
+mountPortfolio({
+  createApp: () => new PortfolioApp(createPortfolioControllers(context)),
+});

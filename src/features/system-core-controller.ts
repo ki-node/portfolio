@@ -27,7 +27,7 @@ export class SystemCoreController implements Controller {
   private readonly coreCoordinates = document.querySelector<HTMLElement>('[data-core-coordinates]');
   private readonly codeReticle = document.querySelector<HTMLElement>('[data-code-reticle]');
   private readonly hudCoordinates = document.querySelector<HTMLElement>('[data-hud-coordinates]');
-  private readonly abortController = new AbortController();
+  private abortController: AbortController | undefined;
   private pulseTimer: number | undefined;
   private state: MotionState | undefined;
   private prefersReducedMotion = false;
@@ -39,16 +39,25 @@ export class SystemCoreController implements Controller {
 
     this.prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.state = this.createInitialState();
+    this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
-    window.addEventListener('pointermove', this.setTarget, { passive: true, signal });
-    window.addEventListener('pointerdown', this.handlePointerDown, { passive: true, signal });
-    window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
-    window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
+    const supportsPointerEvents =
+      typeof (window as Window & { PointerEvent?: typeof PointerEvent }).PointerEvent ===
+      'function';
+
+    if (supportsPointerEvents) {
+      window.addEventListener('pointermove', this.handlePointerMove, { passive: true, signal });
+      window.addEventListener('pointerdown', this.handlePointerDown, { passive: true, signal });
+    } else {
+      window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
+      window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
+    }
   }
 
   destroy() {
-    this.abortController.abort();
+    this.abortController?.abort();
+    this.abortController = undefined;
     window.clearTimeout(this.pulseTimer);
     this.core?.classList.remove('is-energized');
 
@@ -163,6 +172,10 @@ export class SystemCoreController implements Controller {
     if (document.documentElement.classList.contains('is-past-hero')) {
       this.pulse();
     }
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent) => {
+    this.setTarget(event);
   };
 
   private readonly updateTouchTarget = (event: TouchEvent) => {

@@ -37,8 +37,19 @@ getrennt: Er erzeugt weiterhin `dist/` mit der öffentlichen Basis `/portfolio/`
 für GitHub Pages.
 
 Beide Varianten stammen aus derselben `index.html`, derselben Vite-Konfiguration
-und derselben Anwendung. Noch findet keine konkrete Hub- oder Host-Bridge-
-Integration statt.
+und derselben Anwendung. Der Build-Kontext steht als `data-app-context` bereits
+im erzeugten HTML, bevor JavaScript ausgeführt wird. So kann der Embedded-Build
+gezielt die vom Hub bereits übernommene obere Safe Area vermeiden, während
+Seiten- und untere Safe Areas im iframe erhalten bleiben. Der öffentliche Build
+bleibt davon unberührt.
+
+Im Embedded-Kontext werden `mailto:`- und externe `https:`-Links an einem
+zentralen Adapter abgefangen und als versionierte `postMessage`-Nachricht an den
+Hub gemeldet. Hash-Navigation bleibt lokal. Läuft der Embedded-Build ohne
+übergeordneten Host, greift der normale Link-Fallback. Die spätere Erweiterung
+der Host-Bridge erfolgt ausschließlich in
+`src/features/embedded-link-adapter.ts`; Komponenten prüfen den Kontext nicht
+selbst.
 
 ## Qualitätssicherung
 

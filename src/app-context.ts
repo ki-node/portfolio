@@ -17,3 +17,7 @@ export const exposeAppContext = (
 
   return context;
 };
+
+/** Reads the context injected into HTML by Vite before the first paint. */
+export const readExposedAppContext = (root: HTMLElement = document.documentElement): AppContext =>
+  root.dataset.appContext === 'embedded' ? 'embedded' : 'web';
