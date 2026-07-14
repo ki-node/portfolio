@@ -1,6 +1,6 @@
 export default {
   extends: ['stylelint-config-standard'],
-  ignoreFiles: ['coverage/**', 'dist/**', 'node_modules/**'],
+  ignoreFiles: ['coverage/**', 'dist/**', 'dist-embedded/**', 'node_modules/**'],
   rules: {
     'alpha-value-notation': null,
     'color-function-alias-notation': null,

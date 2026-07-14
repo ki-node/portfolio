@@ -7,7 +7,8 @@ const budgets = new Map([
   ['.js', 15 * 1024],
 ]);
 
-const assetsDirectory = new URL('../dist/assets/', import.meta.url);
+const outputDirectory = process.argv[2] ?? 'dist';
+const assetsDirectory = new URL(`../${outputDirectory}/assets/`, import.meta.url);
 const assets = await readdir(assetsDirectory);
 const failures = [];
 

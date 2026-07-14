@@ -20,6 +20,26 @@ npm run dev
 
 Vite zeigt die lokale URL im Terminal an und aktualisiert Änderungen per HMR.
 
+## Embedded-Build für den ki-node Hub
+
+Zusätzlich zum öffentlichen Pages-Build lässt sich ein relocatable Build für den
+ki-node Hub erzeugen:
+
+```bash
+npm run build:embedded
+```
+
+Der Build wird nach `dist-embedded/` geschrieben und verwendet ausschließlich
+relative Asset-Pfade. Dadurch kann er später versionsfixiert an einem beliebigen
+lokalen Pfad wie `/projects/portfolio/index.html` in den Hub eingebettet und ohne
+Netzwerkzugriff geladen werden. Der normale Befehl `npm run build` bleibt davon
+getrennt: Er erzeugt weiterhin `dist/` mit der öffentlichen Basis `/portfolio/`
+für GitHub Pages.
+
+Beide Varianten stammen aus derselben `index.html`, derselben Vite-Konfiguration
+und derselben Anwendung. Noch findet keine konkrete Hub- oder Host-Bridge-
+Integration statt.
+
 ## Qualitätssicherung
 
 ```bash
@@ -28,7 +48,7 @@ npm run test:e2e
 npm run lighthouse
 ```
 
-`npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, den Produktionsbuild und die gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports, einschließlich eines kompakten 320-Pixel-iPhone-Viewports und eines kurzen Querformats. Die Browser-Suite prüft außerdem Tastaturfokus, Reflow, reduzierte Bewegung und erzwungene Systemfarben; axe prüft zentrale WCAG-A/AA-Regeln.
+`npm run check` prüft Formatierung, TypeScript, JavaScript, CSS, Unit-Tests, beide Build-Varianten, deren lokalen Asset-Pfade und die jeweiligen gzip-Budgets. Playwright testet Chromium und WebKit in mobilen und Desktop-Viewports, einschließlich eines kompakten 320-Pixel-iPhone-Viewports und eines kurzen Querformats. Die Browser-Suite prüft außerdem Tastaturfokus, Reflow, reduzierte Bewegung und erzwungene Systemfarben; axe prüft zentrale WCAG-A/AA-Regeln.
 
 Vitest prüft neben der reinen Bewegungslogik auch alle Controller-Lifecycles in einer isolierten DOM-Umgebung. Dabei werden insbesondere Listener, Observer, Timer, Animation Frames und kurzlebige Zustände nach `destroy()` kontrolliert.
 

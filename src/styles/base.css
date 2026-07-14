@@ -9,6 +9,12 @@
     --display: "Manrope", sans-serif;
     --mono: "DM Mono", monospace;
     --page-padding: clamp(1.25rem, 4vw, 4.5rem);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --page-padding-right: max(var(--page-padding), var(--safe-right));
+    --page-padding-left: max(var(--page-padding), var(--safe-left));
 }
 
 *,
@@ -42,8 +48,8 @@ a {
 .skip-link {
     position: fixed;
     z-index: 100;
-    top: 1rem;
-    left: 1rem;
+    top: calc(1rem + var(--safe-top));
+    left: max(1rem, var(--safe-left));
     padding: 0.75rem 1rem;
     background: var(--ink);
     color: var(--paper);
@@ -75,7 +81,8 @@ a {
     width: 100%;
     align-items: center;
     justify-content: space-between;
-    padding: 1.2rem var(--page-padding);
+    padding: calc(1.2rem + var(--safe-top)) var(--page-padding-right) 1.2rem
+        var(--page-padding-left);
     transition: background-color 250ms ease, backdrop-filter 250ms ease;
 }
 
@@ -144,7 +151,8 @@ a {
     position: relative;
     display: grid;
     min-height: 100svh;
-    padding: clamp(8rem, 16vh, 11rem) var(--page-padding) 3rem;
+    padding: calc(clamp(8rem, 16vh, 11rem) + var(--safe-top))
+        var(--page-padding-right) 3rem var(--page-padding-left);
     overflow: hidden;
     align-content: space-between;
 }
@@ -248,7 +256,8 @@ em {
 }
 
 .section {
-    padding: clamp(6rem, 12vw, 11rem) var(--page-padding);
+    padding: clamp(6rem, 12vw, 11rem) var(--page-padding-right)
+        clamp(6rem, 12vw, 11rem) var(--page-padding-left);
 }
 
 .section-heading {
@@ -481,7 +490,8 @@ em {
 }
 
 .contact {
-    padding: clamp(6rem, 12vw, 11rem) var(--page-padding) 4rem;
+    padding: clamp(6rem, 12vw, 11rem) var(--page-padding-right) 4rem
+        var(--page-padding-left);
 }
 
 .contact__top {
@@ -531,7 +541,8 @@ em {
 .site-footer {
     display: flex;
     justify-content: space-between;
-    padding: 1.5rem var(--page-padding);
+    padding: 1.5rem var(--page-padding-right) calc(1.5rem + var(--safe-bottom))
+        var(--page-padding-left);
     border-top: 1px solid var(--line);
     font: 0.7rem var(--mono);
     text-transform: uppercase;
