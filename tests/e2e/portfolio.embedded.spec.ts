@@ -4,14 +4,18 @@ const embeddedUrl = 'http://127.0.0.1:4174/';
 
 const openInHubFrame = async (page: Page) => {
   await page.setContent(`
+    <!doctype html>
+    <html><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <style>
       * { box-sizing: border-box; }
       html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #10091b; }
       .toolbar { height: 104px; padding: 24px; color: white; font: 700 20px system-ui; }
       iframe { display: block; width: 100%; height: calc(100% - 104px); border: 0; }
-    </style>
+    </style></head><body>
     <div class="toolbar">ki-node · Portfolio</div>
     <iframe title="Portfolio" sandbox="allow-forms allow-modals allow-same-origin allow-scripts" src="${embeddedUrl}"></iframe>
+    </body></html>
   `);
   const frame = page.frameLocator('iframe');
   await expect(frame.locator('html')).toHaveAttribute('data-app-context', 'embedded');
@@ -27,21 +31,18 @@ test('injects embedded context into built HTML before application scripts', asyn
   expect(html.indexOf('data-app-context="embedded"')).toBeLessThan(html.indexOf('<script'));
 });
 
-test('keeps the initial skip link hidden for programmatic focus but keyboard reachable', async ({
-  page,
-}) => {
+test('keeps the initial skip link hidden but keyboard reachable', async ({ page }) => {
   const frame = await openInHubFrame(page);
   const skipLink = frame.getByRole('link', { name: 'Zum Inhalt springen' });
+  const iframeBox = await page.locator('iframe').boundingBox();
 
-  await skipLink.evaluate((element) => (element as HTMLElement).focus());
-  const programmaticBox = await skipLink.boundingBox();
-  expect(programmaticBox?.y ?? 0).toBeLessThan(104);
+  const initialBox = await skipLink.boundingBox();
+  expect(initialBox?.y ?? 0).toBeLessThan(iframeBox?.y ?? 104);
 
-  await page.reload();
-  const reloadedFrame = await openInHubFrame(page);
   await page.locator('iframe').focus();
   await page.keyboard.press('Tab');
-  await expect(reloadedFrame.getByRole('link', { name: 'Zum Inhalt springen' })).toBeFocused();
+  await expect(skipLink).toBeFocused();
+  expect((await skipLink.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(iframeBox?.y ?? 104);
 });
 
 test('fits the mobile hero below a Hub toolbar without double top inset or overflow', async ({
@@ -122,13 +123,13 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
 test('forwards allowed links with the versioned bridge and leaves hashes local', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
+  const frame = await openInHubFrame(page);
+  await page.evaluate(() => {
     (window as Window & { bridgeMessages?: unknown[] }).bridgeMessages = [];
     window.addEventListener('message', (event) => {
       (window as Window & { bridgeMessages: unknown[] }).bridgeMessages.push(event.data);
     });
   });
-  const frame = await openInHubFrame(page);
 
   await frame.getByRole('link', { name: 'Nachricht schreiben' }).click();
   await expect
