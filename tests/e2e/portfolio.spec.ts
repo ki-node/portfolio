@@ -5,6 +5,7 @@ test('renders without horizontal overflow', async ({ page }) => {
   await page.goto('./');
 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Ich baue Websites');
+  await expect(page.locator('html')).toHaveAttribute('data-app-context', 'web');
 
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

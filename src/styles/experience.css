@@ -754,8 +754,9 @@ main,
         gap: 0;
         padding:
             max(6.4rem, calc(env(safe-area-inset-top) + 5rem))
-            var(--page-padding)
-            max(1.5rem, env(safe-area-inset-bottom));
+            var(--page-padding-right)
+            max(1.5rem, env(safe-area-inset-bottom))
+            var(--page-padding-left);
         border: 0;
         background:
             linear-gradient(rgba(215, 174, 255, 0.05) 1px, transparent 1px),

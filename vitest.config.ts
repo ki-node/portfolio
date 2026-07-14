@@ -13,6 +13,6 @@ export default defineConfig({
         statements: 95,
       },
     },
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'vite.config.test.ts'],
   },
 });
