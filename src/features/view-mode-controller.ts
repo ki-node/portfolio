@@ -10,6 +10,7 @@ export class ViewModeController implements Controller {
   constructor(
     private readonly pulseCore: () => void,
     private readonly resetInputTracking: () => void = () => undefined,
+    private readonly prepareReticle: () => void = () => undefined,
   ) {}
 
   init() {
@@ -55,6 +56,7 @@ export class ViewModeController implements Controller {
     }
 
     if (mode === 'code') {
+      this.prepareReticle();
       this.pulseCore();
     } else {
       this.resetInputTracking();

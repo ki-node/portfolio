@@ -105,6 +105,18 @@ for (const file of embeddedTextAssets) {
   }
 }
 
+for (const directory of [pagesDirectory, embeddedDirectory]) {
+  const textAssets = await collectTextAssets(directory);
+
+  for (const file of textAssets) {
+    assert.doesNotMatch(
+      await readFile(file, 'utf8'),
+      /\[portfolio:reticle\]/u,
+      `Development Reticle diagnostics leaked into ${path.relative(repositoryRoot, file)}.`,
+    );
+  }
+}
+
 assert.doesNotMatch(
   embeddedHtml,
   /<(?:audio|iframe|img|script|source|video)\b[^>]*\bsrc=["']https?:/iu,

@@ -109,6 +109,11 @@ const createTouchEvent = (type: string, clientX: number, clientY: number) =>
     touches: type === 'touchend' || type === 'touchcancel' ? [] : [{ clientX, clientY } as Touch],
   });
 
+const setViewport = (width: number, height: number) => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
+};
+
 beforeEach(() => {
   document.body.replaceChildren();
   document.body.className = '';
@@ -153,6 +158,10 @@ beforeEach(() => {
   });
   Object.defineProperty(window, 'scrollX', { configurable: true, value: 0 });
   Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+  Object.defineProperty(window, 'visualViewport', {
+    configurable: true,
+    value: undefined,
+  });
 });
 
 afterEach(() => {
@@ -230,7 +239,8 @@ describe('ViewModeController', () => {
     `;
     const pulseCore = vi.fn();
     const resetInputTracking = vi.fn();
-    const controller = new ViewModeController(pulseCore, resetInputTracking);
+    const prepareReticle = vi.fn();
+    const controller = new ViewModeController(pulseCore, resetInputTracking, prepareReticle);
     const codeButton = document.querySelector<HTMLButtonElement>('[data-mode="code"]');
     const designButton = document.querySelector<HTMLButtonElement>('[data-mode="design"]');
 
@@ -240,6 +250,7 @@ describe('ViewModeController', () => {
     expect(document.documentElement.classList.contains('is-code-mode')).toBe(true);
     expect(document.documentElement.classList.contains('is-mode-transitioning')).toBe(true);
     expect(codeButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(prepareReticle).toHaveBeenCalledOnce();
     expect(pulseCore).toHaveBeenCalledOnce();
 
     designButton?.click();
@@ -364,19 +375,23 @@ describe('SystemCoreController', () => {
     const controller = new SystemCoreController(inputSource);
 
     controller.init();
-    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
-    window.dispatchEvent(createTouchEvent('touchstart', 72, 144));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }),
+    );
+    document.body.dispatchEvent(createTouchEvent('touchstart', 72, 144));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(72.00px, 144.00px');
 
-    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }));
-    window.dispatchEvent(createTouchEvent('touchmove', 180, 260));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }),
+    );
+    document.body.dispatchEvent(createTouchEvent('touchmove', 180, 260));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
     expect(inputSource).toHaveBeenLastCalledWith('pointer');
 
-    window.dispatchEvent(createTouchPointerEvent('pointerup'));
-    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    document.body.dispatchEvent(createTouchPointerEvent('pointerup'));
+    document.body.dispatchEvent(createTouchEvent('touchend', 0, 0));
     controller.destroy();
   });
 
@@ -387,20 +402,26 @@ describe('SystemCoreController', () => {
     const controller = new SystemCoreController(inputSource);
 
     controller.init();
-    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
-    window.dispatchEvent(createTouchEvent('touchstart', 72, 144));
-    window.dispatchEvent(createTouchEvent('touchmove', 205, 315));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }),
+    );
+    document.body.dispatchEvent(createTouchEvent('touchstart', 72, 144));
+    document.body.dispatchEvent(createTouchEvent('touchmove', 205, 315));
     flushAnimationFrames();
 
     expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
     expect(inputSource).toHaveBeenLastCalledWith('touch');
 
-    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 250, clientY: 350 }));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointermove', { clientX: 250, clientY: 350 }),
+    );
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
 
-    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
-    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 120, clientY: 220 }));
+    document.body.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointerdown', { clientX: 120, clientY: 220 }),
+    );
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(120.00px, 220.00px');
     expect(inputSource).toHaveBeenLastCalledWith('pointer');
@@ -414,18 +435,42 @@ describe('SystemCoreController', () => {
     const controller = new SystemCoreController(inputSource);
 
     controller.init();
-    window.dispatchEvent(createTouchEvent('touchstart', 90, 180));
-    window.dispatchEvent(createTouchEvent('touchmove', 195, 305));
+    document.body.dispatchEvent(createTouchEvent('touchstart', 90, 180));
+    document.body.dispatchEvent(createTouchEvent('touchmove', 195, 305));
     flushAnimationFrames();
 
     expect(reticle?.style.transform).toContain('translate3d(195.00px, 305.00px');
     expect(inputSource).toHaveBeenLastCalledWith('touch');
 
     window.dispatchEvent(new Event('scroll'));
-    window.dispatchEvent(createTouchEvent('touchend', 0, 0));
-    window.dispatchEvent(createTouchEvent('touchstart', 44, 88));
+    document.body.dispatchEvent(createTouchEvent('touchend', 0, 0));
+    document.body.dispatchEvent(createTouchEvent('touchstart', 44, 88));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(44.00px, 88.00px');
+    controller.destroy();
+  });
+
+  it('accepts a genuine pointer tap at the 0/0 viewport edge', () => {
+    renderSystemCore();
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const diagnostics = vi.fn();
+    const controller = new SystemCoreController(undefined, diagnostics);
+
+    controller.init();
+    document.body.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 0, clientY: 0 }));
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toContain('translate3d(0.00px, 0.00px');
+    expect(diagnostics).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        clientX: 0,
+        clientY: 0,
+        eventType: 'pointerdown',
+        reticleX: 0,
+        reticleY: 0,
+        source: 'pointer',
+      }),
+    );
     controller.destroy();
   });
 
@@ -435,22 +480,114 @@ describe('SystemCoreController', () => {
     const controller = new SystemCoreController(inputSource);
 
     controller.init();
-    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
-    window.dispatchEvent(createTouchEvent('touchmove', 205, 315));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }),
+    );
+    document.body.dispatchEvent(createTouchEvent('touchmove', 205, 315));
     controller.resetInputTracking();
-    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }));
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }),
+    );
     flushAnimationFrames();
     expect(inputSource).toHaveBeenLastCalledWith('pointer');
 
     controller.destroy();
     inputSource.mockClear();
-    window.dispatchEvent(createTouchEvent('touchstart', 100, 100));
+    document.body.dispatchEvent(createTouchEvent('touchstart', 100, 100));
     expect(inputSource).not.toHaveBeenCalled();
 
     controller.init();
-    window.dispatchEvent(createTouchEvent('touchstart', 110, 210));
+    document.body.dispatchEvent(createTouchEvent('touchstart', 110, 210));
     flushAnimationFrames();
     expect(inputSource).toHaveBeenLastCalledWith('touch');
+    controller.destroy();
+  });
+
+  it('defers a 0×0 initialization until resize supplies a valid viewport', () => {
+    renderSystemCore();
+    setViewport(0, 0);
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const coordinates = document.querySelector<HTMLElement>('[data-hud-coordinates]');
+    const diagnostics = vi.fn();
+    const controller = new SystemCoreController(undefined, diagnostics);
+
+    controller.init();
+    controller.prepareForCodeMode();
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toBe('');
+    expect(coordinates?.textContent).toBe('');
+    expect(diagnostics).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        eventType: 'code-mode',
+        innerHeight: 0,
+        innerWidth: 0,
+        reticleX: null,
+        reticleY: null,
+        source: 'viewport',
+      }),
+    );
+
+    setViewport(390, 700);
+    window.dispatchEvent(new Event('resize'));
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toContain('translate3d(195.00px, 350.00px');
+    expect(coordinates?.textContent).toBe('X 50 / Y 50');
+    controller.destroy();
+  });
+
+  it('uses pageshow and visualViewport resize to recover delayed dimensions', () => {
+    renderSystemCore();
+    setViewport(0, 0);
+    const visualViewport = new EventTarget();
+    Object.defineProperties(visualViewport, {
+      width: { configurable: true, value: 0 },
+      height: { configurable: true, value: 0 },
+    });
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: visualViewport,
+    });
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const controller = new SystemCoreController();
+
+    controller.init();
+    window.dispatchEvent(new Event('pageshow'));
+    expect(reticle?.style.transform).toBe('');
+
+    Object.defineProperties(visualViewport, {
+      width: { configurable: true, value: 320 },
+      height: { configurable: true, value: 568 },
+    });
+    visualViewport.dispatchEvent(new Event('resize'));
+    flushAnimationFrames();
+
+    expect(reticle?.style.transform).toContain('translate3d(160.00px, 284.00px');
+    controller.destroy();
+  });
+
+  it('clamps a user position on rotation without recentering it afterwards', () => {
+    renderSystemCore();
+    const reticle = document.querySelector<HTMLElement>('[data-code-reticle]');
+    const controller = new SystemCoreController();
+
+    controller.init();
+    document.body.dispatchEvent(
+      createTouchPointerEvent('pointerdown', { clientX: 380, clientY: 690 }),
+    );
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(380.00px, 690.00px');
+
+    setViewport(300, 500);
+    window.dispatchEvent(new Event('resize'));
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(300.00px, 500.00px');
+
+    setViewport(500, 800);
+    window.dispatchEvent(new Event('resize'));
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(300.00px, 500.00px');
     controller.destroy();
   });
 
@@ -470,7 +607,7 @@ describe('SystemCoreController', () => {
     expect(core?.classList.contains('is-energized')).toBe(false);
     expect(frameCallbacks).toHaveLength(0);
 
-    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, clientY: 100 }));
+    document.body.dispatchEvent(new MouseEvent('pointermove', { clientX: 100, clientY: 100 }));
     vi.runAllTimers();
     expect(frameCallbacks).toHaveLength(0);
   });

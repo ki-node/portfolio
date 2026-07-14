@@ -8,17 +8,23 @@ import { SystemCoreController } from './features/system-core-controller';
 import { ViewModeController } from './features/view-mode-controller';
 import { ViewportObserversController } from './features/viewport-observers-controller';
 import { EmbeddedLinkAdapter } from './features/embedded-link-adapter';
+import type { ReticleDiagnosticReporter } from './features/reticle-diagnostics';
 
 export const createPortfolioControllers = (
   context: AppContext = readExposedAppContext(),
+  reportReticleDiagnostic?: ReticleDiagnosticReporter,
 ): Controller[] => {
-  const systemCore = new SystemCoreController();
+  const systemCore = new SystemCoreController(undefined, reportReticleDiagnostic);
 
   return [
     new CurrentYearController(),
     new NavigationController(),
     systemCore,
-    new ViewModeController(systemCore.pulse, systemCore.resetInputTracking),
+    new ViewModeController(
+      systemCore.pulse,
+      systemCore.resetInputTracking,
+      systemCore.prepareForCodeMode,
+    ),
     new PageProgressController(systemCore.requestRender),
     new PointerEffectsController(),
     new ViewportObserversController(),

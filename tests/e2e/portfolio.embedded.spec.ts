@@ -32,7 +32,7 @@ const dispatchTouch = async (
         targetTouches: { value: activeTouches },
         touches: { value: activeTouches },
       });
-      window.dispatchEvent(event);
+      body.dispatchEvent(event);
     },
     { type, clientX, clientY },
   );
@@ -79,6 +79,51 @@ test('keeps the initial skip link hidden but keyboard reachable', async ({ page 
   await page.keyboard.press('Tab');
   await expect(skipLink).toBeFocused();
   expect((await skipLink.boundingBox())?.y ?? 0).toBeGreaterThanOrEqual(iframeBox?.y ?? 104);
+});
+
+test('recovers from a 0×0 initialization before delayed iframe visibility', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (window === window.parent) return;
+
+    let testWidth = 0;
+    let testHeight = 0;
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      get: () => testWidth,
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      get: () => testHeight,
+    });
+    Object.defineProperty(window, '__setReticleTestViewport', {
+      configurable: true,
+      value: (width: number, height: number) => {
+        testWidth = width;
+        testHeight = height;
+      },
+    });
+  });
+  const frame = await openInHubFrame(page);
+  const reticle = frame.locator('[data-code-reticle]');
+
+  await frame
+    .getByRole('button', { name: 'Code' })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  expect(await reticle.getAttribute('style')).toBeNull();
+
+  await frame.locator('html').evaluate(() => {
+    (
+      window as Window & {
+        __setReticleTestViewport: (width: number, height: number) => void;
+      }
+    ).__setReticleTestViewport(390, 740);
+    window.dispatchEvent(new Event('resize'));
+  });
+  await expect.poll(() => reticlePosition(frame)).toEqual([195, 370]);
+
+  await dispatchTouch(frame, 'touchstart', 84, 168);
+  await dispatchTouch(frame, 'touchmove', 184, 268);
+  await expect.poll(() => reticlePosition(frame)).toEqual([184, 268]);
 });
 
 test('fits the mobile hero below a Hub toolbar without double top inset or overflow', async ({

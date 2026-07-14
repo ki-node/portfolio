@@ -7,6 +7,7 @@ import {
   type CorePose,
   type NormalizedPoint,
   type ViewportPoint,
+  type ViewportSize,
 } from '../motion/core-motion';
 import type { Controller } from './controller';
 
@@ -22,6 +23,20 @@ interface MotionState {
 }
 
 type InputSource = 'pointer' | 'touch';
+type DiagnosticSource = InputSource | 'viewport';
+
+export interface ReticleDiagnostic {
+  readonly eventType: string;
+  readonly source: DiagnosticSource;
+  readonly clientX: number | null;
+  readonly clientY: number | null;
+  readonly innerWidth: number;
+  readonly innerHeight: number;
+  readonly visualViewportWidth: number | null;
+  readonly visualViewportHeight: number | null;
+  readonly reticleX: number | null;
+  readonly reticleY: number | null;
+}
 
 interface TouchPointerSequence {
   readonly pointerId: number;
@@ -46,7 +61,10 @@ export class SystemCoreController implements Controller {
   private touchPointerSequence: TouchPointerSequence | undefined;
   private touchOwnsSequence = false;
 
-  constructor(private readonly reportInputSource?: (source: InputSource) => void) {}
+  constructor(
+    private readonly reportInputSource?: (source: InputSource) => void,
+    private readonly reportDiagnostic?: (diagnostic: ReticleDiagnostic) => void,
+  ) {}
 
   init() {
     if (!this.core) {
@@ -54,7 +72,7 @@ export class SystemCoreController implements Controller {
     }
 
     this.prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.state = this.createInitialState();
+    this.state = undefined;
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
@@ -63,17 +81,56 @@ export class SystemCoreController implements Controller {
       'function';
 
     if (supportsPointerEvents) {
-      window.addEventListener('pointermove', this.handlePointerMove, { passive: true, signal });
-      window.addEventListener('pointerdown', this.handlePointerDown, { passive: true, signal });
-      window.addEventListener('pointerup', this.handlePointerEnd, { passive: true, signal });
-      window.addEventListener('pointercancel', this.handlePointerEnd, { passive: true, signal });
+      document.addEventListener('pointermove', this.handlePointerMove, {
+        capture: true,
+        passive: true,
+        signal,
+      });
+      document.addEventListener('pointerdown', this.handlePointerDown, {
+        capture: true,
+        passive: true,
+        signal,
+      });
+      document.addEventListener('pointerup', this.handlePointerEnd, {
+        capture: true,
+        passive: true,
+        signal,
+      });
+      document.addEventListener('pointercancel', this.handlePointerEnd, {
+        capture: true,
+        passive: true,
+        signal,
+      });
     }
 
     // WKWebView can expose PointerEvent while still emitting touch-only sequences.
-    window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
-    window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
-    window.addEventListener('touchend', this.handleTouchEnd, { passive: true, signal });
-    window.addEventListener('touchcancel', this.handleTouchEnd, { passive: true, signal });
+    document.addEventListener('touchstart', this.updateTouchTarget, {
+      capture: true,
+      passive: true,
+      signal,
+    });
+    document.addEventListener('touchmove', this.updateTouchTarget, {
+      capture: true,
+      passive: true,
+      signal,
+    });
+    document.addEventListener('touchend', this.handleTouchEnd, {
+      capture: true,
+      passive: true,
+      signal,
+    });
+    document.addEventListener('touchcancel', this.handleTouchEnd, {
+      capture: true,
+      passive: true,
+      signal,
+    });
+    window.addEventListener('pageshow', this.handleViewportEvent, { passive: true, signal });
+    window.addEventListener('resize', this.handleViewportEvent, { passive: true, signal });
+    window.visualViewport?.addEventListener('resize', this.handleViewportEvent, {
+      passive: true,
+      signal,
+    });
+    this.refreshViewport('init');
   }
 
   destroy() {
@@ -85,14 +142,17 @@ export class SystemCoreController implements Controller {
 
     if (this.state?.frame !== null && this.state?.frame !== undefined) {
       window.cancelAnimationFrame(this.state.frame);
-      this.state.frame = null;
     }
+    this.state = undefined;
   }
 
   requestRender = () => {
-    if (this.state) {
-      this.state.frame ??= window.requestAnimationFrame(this.renderFrame);
+    if (!this.state) {
+      this.refreshViewport('render-request');
+      return;
     }
+
+    this.state.frame ??= window.requestAnimationFrame(this.renderFrame);
   };
 
   pulse = () => {
@@ -110,8 +170,46 @@ export class SystemCoreController implements Controller {
     this.touchOwnsSequence = false;
   };
 
-  private createInitialState(): MotionState {
-    const center = { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 };
+  refreshViewport = (eventType = 'manual') => {
+    const viewport = this.readValidViewport();
+
+    if (!viewport) {
+      this.emitDiagnostic(eventType, 'viewport', null, null);
+      return;
+    }
+
+    if (!this.state) {
+      this.state = this.createInitialState(viewport);
+    } else {
+      const target = normalizeViewportPoint(
+        { clientX: this.state.targetX, clientY: this.state.targetY },
+        viewport,
+      );
+      const current = normalizeViewportPoint(
+        { clientX: this.state.currentX, clientY: this.state.currentY },
+        viewport,
+      );
+
+      this.state.targetX = target.clientX;
+      this.state.targetY = target.clientY;
+      this.state.currentX = current.clientX;
+      this.state.currentY = current.clientY;
+      this.state.normalizedPoint = current;
+    }
+
+    this.emitDiagnostic(
+      eventType,
+      'viewport',
+      { clientX: this.state.targetX, clientY: this.state.targetY },
+      this.state.normalizedPoint,
+    );
+    this.requestRender();
+  };
+
+  prepareForCodeMode = () => this.refreshViewport('code-mode');
+
+  private createInitialState(viewport: ViewportSize): MotionState {
+    const center = { clientX: viewport.width / 2, clientY: viewport.height / 2 };
 
     return {
       targetX: center.clientX,
@@ -119,10 +217,7 @@ export class SystemCoreController implements Controller {
       currentX: center.clientX,
       currentY: center.clientY,
       pose: { panX: 0, panY: 0, rotateX: 0, rotateY: 0, velocityX: 0, velocityY: 0 },
-      normalizedPoint: normalizeViewportPoint(center, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      }),
+      normalizedPoint: normalizeViewportPoint(center, viewport),
       frame: null,
       lastLabelUpdate: 0,
     };
@@ -130,8 +225,12 @@ export class SystemCoreController implements Controller {
 
   private readonly renderFrame = (timestamp: number) => {
     const state = this.state;
+    const viewport = this.readValidViewport();
 
-    if (!state || !this.core) {
+    if (!state || !this.core || !viewport) {
+      if (state) {
+        state.frame = null;
+      }
       return;
     }
 
@@ -144,7 +243,7 @@ export class SystemCoreController implements Controller {
 
     state.normalizedPoint = normalizeViewportPoint(
       { clientX: state.currentX, clientY: state.currentY },
-      { width: window.innerWidth, height: window.innerHeight },
+      viewport,
     );
     const isPastHero = document.documentElement.classList.contains('is-past-hero');
     const target = calculateCoreTarget(
@@ -177,19 +276,21 @@ export class SystemCoreController implements Controller {
     }
   };
 
-  private readonly setTarget = (point: ViewportPoint, source: InputSource) => {
-    if (!this.state) {
+  private readonly setTarget = (point: ViewportPoint, source: InputSource, eventType: string) => {
+    const viewport = this.readValidViewport();
+
+    if (!viewport || !Number.isFinite(point.clientX) || !Number.isFinite(point.clientY)) {
+      this.emitDiagnostic(eventType, source, point, null);
       return;
     }
 
-    const normalizedPoint = normalizeViewportPoint(point, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
+    this.state ??= this.createInitialState(viewport);
+    const normalizedPoint = normalizeViewportPoint(point, viewport);
 
     this.state.targetX = normalizedPoint.clientX;
     this.state.targetY = normalizedPoint.clientY;
     this.reportInputSource?.(source);
+    this.emitDiagnostic(eventType, source, point, normalizedPoint);
     this.requestRender();
   };
 
@@ -207,7 +308,7 @@ export class SystemCoreController implements Controller {
       };
     }
 
-    this.setTarget(event, 'pointer');
+    this.setTarget(event, 'pointer', event.type);
     this.nudgeCore(event);
 
     if (document.documentElement.classList.contains('is-past-hero')) {
@@ -235,7 +336,7 @@ export class SystemCoreController implements Controller {
       }
     }
 
-    this.setTarget(event, 'pointer');
+    this.setTarget(event, 'pointer', event.type);
   };
 
   private readonly handlePointerEnd = (event: PointerEvent) => {
@@ -269,12 +370,66 @@ export class SystemCoreController implements Controller {
     }
 
     this.touchOwnsSequence = true;
-    this.setTarget(touch, 'touch');
+    this.setTarget(touch, 'touch', event.type);
   };
 
   private readonly handleTouchEnd = () => {
     this.resetInputTracking();
   };
+
+  private readonly handleViewportEvent = (event: Event) => {
+    this.refreshViewport(event.type);
+  };
+
+  private readValidViewport(): ViewportSize | undefined {
+    const innerWidth = window.innerWidth;
+    const innerHeight = window.innerHeight;
+
+    if (
+      Number.isFinite(innerWidth) &&
+      Number.isFinite(innerHeight) &&
+      innerWidth > 0 &&
+      innerHeight > 0
+    ) {
+      return { width: innerWidth, height: innerHeight };
+    }
+
+    const visualWidth = window.visualViewport?.width;
+    const visualHeight = window.visualViewport?.height;
+
+    if (
+      visualWidth !== undefined &&
+      visualHeight !== undefined &&
+      Number.isFinite(visualWidth) &&
+      Number.isFinite(visualHeight) &&
+      visualWidth > 0 &&
+      visualHeight > 0
+    ) {
+      return { width: visualWidth, height: visualHeight };
+    }
+
+    return undefined;
+  }
+
+  private emitDiagnostic(
+    eventType: string,
+    source: DiagnosticSource,
+    point: ViewportPoint | null,
+    calculated: Pick<NormalizedPoint, 'clientX' | 'clientY'> | null,
+  ) {
+    this.reportDiagnostic?.({
+      eventType,
+      source,
+      clientX: point && Number.isFinite(point.clientX) ? point.clientX : null,
+      clientY: point && Number.isFinite(point.clientY) ? point.clientY : null,
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visualViewportWidth: window.visualViewport?.width ?? null,
+      visualViewportHeight: window.visualViewport?.height ?? null,
+      reticleX: calculated?.clientX ?? null,
+      reticleY: calculated?.clientY ?? null,
+    });
+  }
 
   private nudgeCore(point: ViewportPoint) {
     if (
