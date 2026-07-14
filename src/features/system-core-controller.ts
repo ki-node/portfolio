@@ -31,6 +31,7 @@ export class SystemCoreController implements Controller {
   private pulseTimer: number | undefined;
   private state: MotionState | undefined;
   private prefersReducedMotion = false;
+  private readonly activeTouchPointerIds = new Set<number>();
 
   init() {
     if (!this.core) {
@@ -49,15 +50,19 @@ export class SystemCoreController implements Controller {
     if (supportsPointerEvents) {
       window.addEventListener('pointermove', this.handlePointerMove, { passive: true, signal });
       window.addEventListener('pointerdown', this.handlePointerDown, { passive: true, signal });
-    } else {
-      window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
-      window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
+      window.addEventListener('pointerup', this.handlePointerEnd, { passive: true, signal });
+      window.addEventListener('pointercancel', this.handlePointerEnd, { passive: true, signal });
     }
+
+    // WKWebView can expose PointerEvent while still emitting touch-only sequences.
+    window.addEventListener('touchstart', this.updateTouchTarget, { passive: true, signal });
+    window.addEventListener('touchmove', this.updateTouchTarget, { passive: true, signal });
   }
 
   destroy() {
     this.abortController?.abort();
     this.abortController = undefined;
+    this.activeTouchPointerIds.clear();
     window.clearTimeout(this.pulseTimer);
     this.core?.classList.remove('is-energized');
 
@@ -166,6 +171,10 @@ export class SystemCoreController implements Controller {
   };
 
   private readonly handlePointerDown = (event: PointerEvent) => {
+    if (event.pointerType === 'touch') {
+      this.activeTouchPointerIds.add(event.pointerId);
+    }
+
     this.setTarget(event);
     this.nudgeCore(event);
 
@@ -178,7 +187,17 @@ export class SystemCoreController implements Controller {
     this.setTarget(event);
   };
 
+  private readonly handlePointerEnd = (event: PointerEvent) => {
+    if (event.pointerType === 'touch') {
+      this.activeTouchPointerIds.delete(event.pointerId);
+    }
+  };
+
   private readonly updateTouchTarget = (event: TouchEvent) => {
+    if (this.activeTouchPointerIds.size > 0) {
+      return;
+    }
+
     const touch = event.touches[0];
 
     if (touch) {

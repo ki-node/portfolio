@@ -92,6 +92,18 @@ const createMediaQueryList = (query: string): MediaQueryList => ({
   dispatchEvent: vi.fn(() => true),
 });
 
+const createTouchPointerEvent = (
+  type: string,
+  init: MouseEventInit & { pointerId?: number } = {},
+) => {
+  const event = new MouseEvent(type, init) as PointerEvent;
+  Object.defineProperties(event, {
+    pointerId: { value: init.pointerId ?? 7 },
+    pointerType: { value: 'touch' },
+  });
+  return event;
+};
+
 beforeEach(() => {
   document.body.replaceChildren();
   document.documentElement.className = '';
@@ -322,20 +334,30 @@ describe('SystemCoreController', () => {
     const controller = new SystemCoreController();
 
     controller.init();
+    window.dispatchEvent(createTouchPointerEvent('pointerdown', { clientX: 72, clientY: 144 }));
     window.dispatchEvent(
-      new PointerEvent('pointerdown', { clientX: 72, clientY: 144, pointerType: 'touch' }),
+      new TouchEvent('touchstart', {
+        touches: [{ clientX: 210, clientY: 310 } as Touch],
+      }),
     );
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(72.00px, 144.00px');
 
-    window.dispatchEvent(
-      new PointerEvent('pointermove', { clientX: 180, clientY: 260, pointerType: 'touch' }),
-    );
+    window.dispatchEvent(createTouchPointerEvent('pointermove', { clientX: 180, clientY: 260 }));
     flushAnimationFrames();
     expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
 
+    window.dispatchEvent(createTouchPointerEvent('pointerup'));
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 205, clientY: 315 } as Touch],
+      }),
+    );
+    flushAnimationFrames();
+    expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
+
     window.dispatchEvent(new Event('scroll'));
-    expect(reticle?.style.transform).toContain('translate3d(180.00px, 260.00px');
+    expect(reticle?.style.transform).toContain('translate3d(205.00px, 315.00px');
     controller.destroy();
   });
 

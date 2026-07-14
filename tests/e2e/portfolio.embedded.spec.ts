@@ -2,6 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 
 const embeddedUrl = 'http://127.0.0.1:4174/';
 
+const reticlePosition = async (frame: ReturnType<Page['frameLocator']>) =>
+  frame.locator('[data-code-reticle]').evaluate((element) => {
+    const transform = (element as HTMLElement).style.transform;
+    const match = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/u.exec(transform);
+
+    return match ? [Number(match[1]), Number(match[2])] : [];
+  });
+
 const openInHubFrame = async (page: Page) => {
   await page.setContent(`
     <!doctype html>
@@ -90,10 +98,7 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
   expect(iframeBox).not.toBeNull();
   await page.touchscreen.tap((iframeBox?.x ?? 0) + 96, (iframeBox?.y ?? 0) + 180);
 
-  let transform = await frame
-    .locator('[data-code-reticle]')
-    .evaluate((element) => (element as HTMLElement).style.transform);
-  expect(transform).toContain('translate3d(96.00px, 180.00px');
+  await expect.poll(() => reticlePosition(frame)).toEqual([96, 180]);
 
   await frame.locator('body').dispatchEvent('pointerdown', {
     clientX: 110,
@@ -107,17 +112,10 @@ test('tracks a real touchscreen tap and pointer drag in iframe viewport coordina
     pointerId: 7,
     pointerType: 'touch',
   });
-  transform = await frame
-    .locator('[data-code-reticle]')
-    .evaluate((element) => (element as HTMLElement).style.transform);
-  expect(transform).toContain('translate3d(205.00px, 315.00px');
+  await expect.poll(() => reticlePosition(frame)).toEqual([205, 315]);
 
   await frame.locator('#arbeit').evaluate((element) => element.scrollIntoView());
-  expect(
-    await frame
-      .locator('[data-code-reticle]')
-      .evaluate((element) => (element as HTMLElement).style.transform),
-  ).toContain('translate3d(205.00px, 315.00px');
+  expect(await reticlePosition(frame)).toEqual([205, 315]);
 });
 
 test('forwards allowed links with the versioned bridge and leaves hashes local', async ({
@@ -161,6 +159,6 @@ test('forwards allowed links with the versioned bridge and leaves hashes local',
       url: 'https://example.com/path',
     });
 
-  await frame.locator('a[href="#arbeit"]').first().click();
+  await frame.getByRole('link', { name: 'Ausgewählte Arbeit ansehen' }).click();
   await expect(frame.locator('#arbeit')).toBeInViewport();
 });
