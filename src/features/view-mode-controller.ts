@@ -7,7 +7,11 @@ export class ViewModeController implements Controller {
   private readonly abortController = new AbortController();
   private transitionTimer: number | undefined;
 
-  constructor(private readonly pulseCore: () => void) {}
+  constructor(
+    private readonly pulseCore: () => void,
+    private readonly resetInputTracking: () => void = () => undefined,
+    private readonly prepareReticle: () => void = () => undefined,
+  ) {}
 
   init() {
     this.buttons.forEach((button) => {
@@ -52,7 +56,10 @@ export class ViewModeController implements Controller {
     }
 
     if (mode === 'code') {
+      this.prepareReticle();
       this.pulseCore();
+    } else {
+      this.resetInputTracking();
     }
   }
 }

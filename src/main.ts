@@ -6,6 +6,12 @@ import './styles/experience.css';
 
 import { exposeAppContext } from './app-context';
 import { mountPortfolio } from './app-lifecycle';
+import { reportReticleDiagnostic } from './features/reticle-diagnostics';
+import { createPortfolioControllers, PortfolioApp } from './portfolio-app';
 
-exposeAppContext(import.meta.env.MODE);
-mountPortfolio();
+const context = exposeAppContext(import.meta.env.MODE);
+const reticleDiagnostic = import.meta.env.DEV ? reportReticleDiagnostic : undefined;
+
+mountPortfolio({
+  createApp: () => new PortfolioApp(createPortfolioControllers(context, reticleDiagnostic)),
+});

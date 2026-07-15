@@ -41,6 +41,9 @@ const collectTextAssets = async (directory) => {
 const pagesHtml = await readOutput(pagesDirectory);
 const embeddedHtml = await readOutput(embeddedDirectory);
 
+assert.match(pagesHtml, /<html lang="de" data-app-context="web">/u);
+assert.match(embeddedHtml, /<html lang="de" data-app-context="embedded">/u);
+
 assert.match(pagesHtml, /href="\/portfolio\/icon\.svg"/u);
 assert.match(pagesHtml, /href="\/portfolio\/apple-touch-icon\.png"/u);
 assert.match(pagesHtml, /href="https:\/\/ki-node\.github\.io\/portfolio\/"/u);
@@ -98,6 +101,18 @@ for (const file of embeddedTextAssets) {
     await assertFileExists(
       path.resolve(path.dirname(file), decodeURIComponent(reference.split(/[?#]/u)[0] ?? '')),
       `Missing embedded CSS asset: ${reference}`,
+    );
+  }
+}
+
+for (const directory of [pagesDirectory, embeddedDirectory]) {
+  const textAssets = await collectTextAssets(directory);
+
+  for (const file of textAssets) {
+    assert.doesNotMatch(
+      await readFile(file, 'utf8'),
+      /\[portfolio:reticle\]/u,
+      `Development Reticle diagnostics leaked into ${path.relative(repositoryRoot, file)}.`,
     );
   }
 }

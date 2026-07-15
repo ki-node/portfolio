@@ -1,5 +1,40 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
+
+const readScrollLockState = () => ({
+  bodyInset: document.body.style.inset,
+  bodyPosition: document.body.style.position,
+  htmlOverflow: document.documentElement.style.overflow,
+  scrollY: window.scrollY,
+});
+
+const dispatchTouch = async (
+  target: Locator,
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  clientX: number,
+  clientY: number,
+) => {
+  await target.evaluate(
+    (element, input) => {
+      const touch = {
+        identifier: 17,
+        target: element,
+        clientX: input.clientX,
+        clientY: input.clientY,
+      };
+      const activeTouches = input.type === 'touchend' ? [] : [touch];
+      const event = new Event(input.type, { bubbles: true, cancelable: true });
+
+      Object.defineProperties(event, {
+        changedTouches: { value: [touch] },
+        targetTouches: { value: activeTouches },
+        touches: { value: activeTouches },
+      });
+      element.dispatchEvent(event);
+    },
+    { type, clientX, clientY },
+  );
+};
 
 test('renders without horizontal overflow', async ({ page }) => {
   await page.goto('./');
@@ -94,6 +129,81 @@ test('opens and closes the mobile navigation accessibly', async ({ page, isMobil
   await expect(trigger).toHaveAccessibleName('Menü öffnen');
   await expect(trigger).toBeFocused();
   await expect(page.locator('main')).not.toHaveAttribute('inert', '');
+});
+
+test('locks and restores the document at scroll position zero', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'The command deck is a mobile navigation pattern.');
+  await page.goto('./');
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  const trigger = page.locator('[data-menu-button]');
+  await trigger.click();
+
+  const lockState = await page.evaluate(readScrollLockState);
+
+  expect(lockState).toMatchObject({ bodyPosition: 'fixed', htmlOverflow: 'hidden' });
+  expect(lockState.bodyInset).toMatch(/^0px 0(?:px)? auto(?: 0px)?$/u);
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test('keeps the background fixed, the menu scrollable and restores deep scroll', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'The command deck is a mobile navigation pattern.');
+  await page.setViewportSize({ width: 390, height: 420 });
+  await page.goto('./');
+  const savedScrollY = await page.evaluate(() => {
+    window.scrollTo(0, Math.min(1_400, document.documentElement.scrollHeight - window.innerHeight));
+    return window.scrollY;
+  });
+  const trigger = page.locator('[data-menu-button]');
+  const navigation = page.getByRole('navigation', { name: 'Hauptnavigation' });
+
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    await trigger.click();
+    const lockedState = await page.evaluate(readScrollLockState);
+
+    expect(lockedState.bodyPosition).toBe('fixed');
+    expect(lockedState.bodyInset).toContain(`${-savedScrollY}px`);
+
+    await dispatchTouch(page.locator('main'), 'touchstart', 190, 420);
+    await dispatchTouch(page.locator('main'), 'touchmove', 190, 180);
+    expect((await page.evaluate(readScrollLockState)).bodyInset).toBe(lockedState.bodyInset);
+
+    if (iteration === 0) {
+      await page.setViewportSize({ width: 568, height: 390 });
+      expect((await page.evaluate(readScrollLockState)).bodyInset).toBe(lockedState.bodyInset);
+      await page.setViewportSize({ width: 390, height: 420 });
+    }
+
+    const menuScroll = await navigation.evaluate((element) => {
+      element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+      return {
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+      };
+    });
+    expect(menuScroll.scrollHeight).toBeGreaterThan(menuScroll.clientHeight);
+    expect(menuScroll.scrollTop).toBeGreaterThan(0);
+
+    await page.keyboard.press('Escape');
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(savedScrollY);
+  }
+});
+
+test('removes the document scroll lock during pagehide cleanup', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'The command deck is a mobile navigation pattern.');
+  await page.goto('./');
+  await page.locator('[data-menu-button]').click();
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+
+  await expect
+    .poll(() => page.evaluate(readScrollLockState))
+    .toMatchObject({ bodyPosition: '', htmlOverflow: '' });
 });
 
 test('reflows at 320 CSS pixels without clipping controls', async ({ page }) => {

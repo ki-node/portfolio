@@ -17,6 +17,11 @@
     --page-padding-left: max(var(--page-padding), var(--safe-left));
 }
 
+html[data-app-context="embedded"] {
+    /* The Hub toolbar already owns the outer top inset. Side and bottom insets remain local. */
+    --safe-top: 0px;
+}
+
 *,
 *::before,
 *::after {
@@ -56,7 +61,7 @@ a {
     transform: translateY(-200%);
 }
 
-.skip-link:focus {
+.skip-link:focus-visible {
     transform: translateY(0);
 }
 

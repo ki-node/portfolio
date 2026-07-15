@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { exposeAppContext, resolveAppContext } from './app-context';
+import { exposeAppContext, readExposedAppContext, resolveAppContext } from './app-context';
 
 afterEach(() => {
   document.documentElement.removeAttribute('data-app-context');
@@ -17,5 +17,6 @@ describe('application context', () => {
   it('detects and exposes the embedded context centrally', () => {
     expect(exposeAppContext('embedded')).toBe('embedded');
     expect(document.documentElement.dataset.appContext).toBe('embedded');
+    expect(readExposedAppContext()).toBe('embedded');
   });
 });
