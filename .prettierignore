@@ -1,6 +1,7 @@
 dist
 dist-embedded
 coverage
+artifacts
 node_modules
 package-lock.json
 playwright-report
