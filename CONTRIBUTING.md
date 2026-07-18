@@ -29,6 +29,14 @@ Für Playwright werden einmalig die Browser benötigt:
 npx playwright install chromium webkit
 ```
 
+## Versionierte Repository-Wartung
+
+- `.nvmrc` ist die zentrale Node-Version für lokale Entwicklung und GitHub Actions; `package.json` hält dazu kompatible Engine-Grenzen fest.
+- Abhängigkeiten werden lokal und in CI reproduzierbar mit `npm ci` installiert.
+- GitHub Actions sind auf vollständige Commit-SHAs gepinnt. Updates erfolgen kontrolliert über die versionierte Dependabot-Konfiguration.
+- Das Quality Gate läuft mit reinen Leserechten, begrenzt parallele Branch-Läufe und prüft nach allen Builds und Tests einen sauberen Arbeitsbaum.
+- Schreibrechte für GitHub Pages sind ausschließlich auf den Deployment-Job begrenzt.
+
 ## Definition of Done
 
 - Die Änderung funktioniert ab 320 Pixel Viewport-Breite.

@@ -1,4 +1,5 @@
 version: 2
+
 updates:
   - package-ecosystem: npm
     directory: /
@@ -11,12 +12,15 @@ updates:
     groups:
       development-tooling:
         dependency-type: development
-        update-types: [minor, patch]
+        update-types:
+          - minor
+          - patch
     # TypeScript 7 is outside the supported range of the current
     # typescript-eslint toolchain. Remove this once support lands.
     ignore:
       - dependency-name: typescript
-        versions: ['>=7.0.0']
+        versions:
+          - '>=7.0.0'
 
   - package-ecosystem: github-actions
     directory: /
